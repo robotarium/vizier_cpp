@@ -5,12 +5,13 @@
 #include <mutex>
 #include <condition_variable>
 
-template <class T> class ThreadSafeQueue {
+template <class T> 
+class ThreadSafeQueue {
 
 private:
   std::queue<T> q;
-  mutable std::mutex m;
-  std::condition_variable c;
+	mutable std::mutex m;
+	std::condition_variable c;
 
 public:
   ThreadSafeQueue(void) {

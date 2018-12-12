@@ -8,7 +8,7 @@
 class CountDownLatch {
 
 private:
-	std::atomic<int> count;
+  std::atomic<int> count;
   mutable std::mutex m;
   std::condition_variable c;
 

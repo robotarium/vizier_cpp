@@ -4,7 +4,8 @@
 #include <mutex>
 #include <condition_variable>
 
-template <class T> class Promise {
+template <class T> 
+class Promise {
 
 private:
   T cv;

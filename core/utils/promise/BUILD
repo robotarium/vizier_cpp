@@ -1,5 +1,6 @@
 cc_library(
-    name = "promise"
-    hdrs = "promise.h"
-    visiblity = ["//utils:__pkg__"]
+    name = "promise",
+    hdrs = ["promise.h"],
+    includes = ["."],
+    visibility = ["//visibility:public"],
 )
