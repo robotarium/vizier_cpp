@@ -5,7 +5,7 @@ cc_library(
     includes = ["."],
     deps = [
             "//tsqueue:tsqueue",
-            "//promise:promise"
+            "//promise:promise",
     ],
 )
 
@@ -13,6 +13,7 @@ cc_binary(
     name = "mqttclienttest",
     srcs = ["mqttclienttest.cc"],
     deps = [
-        ":mqttclient"
+        ":mqttclient",
+        "@spdlog//:spdlog",
     ],
 )

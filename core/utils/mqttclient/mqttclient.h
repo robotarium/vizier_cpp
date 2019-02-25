@@ -9,28 +9,13 @@
 #include <promise.h>
 #include <iostream>
 #include <functional>
+#include <spdlog/spdlog.h>
 
 
 
 class MQTTClient {
 
 private:
-
-  /**
-   * Local class to hold data
-   */
-  /*class DataTuple {
-  public:
-    std::string topic;
-    std::string message;
-
-    DataTuple() = default;
-    DataTuple(std::string topic, std::string message) : topic(topic), message(message) {};
-
-    bool operator ==(const DataTuple& b) const{
-      return this->topic == b.topic && this->message == b.message;
-    }
-  };*/
 
   std::string host;
   int port;
@@ -56,14 +41,16 @@ public:
     mosq = mosquitto_new("overhead_tracker", clean_session, this);
 
     if(!mosq){
-      std::cerr << "Error: Couldn't allocate memory" << std::endl;
+      spdlog::error("Could not allocate memory");
       throw 1;
     }
 
     if(mosquitto_connect_bind(mosq, host.c_str(), port, keepalive, NULL)) {
-      std::cerr << "Unable to connect to MQTT broker at " << host << ":" << port << std::endl;
+      spdlog::error("Unable to connect to MQTT broker at host {0} port {1}", host, port);
       throw 2;
     }
+
+    spdlog::info("Connected to MQTT broker at host: {0}, port: {1}", host, port);
 
     //Set message callback and start the loop!
     mosquitto_message_callback_set(mosq, &MQTTClient::message_callback_static);
