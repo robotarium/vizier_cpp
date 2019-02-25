@@ -14,25 +14,22 @@ private:
 	std::condition_variable c;
 
 public:
-  ThreadSafeQueue(void) {
+  ThreadSafeQueue() = default;
+  ~ThreadSafeQueue() = default;
 
-    q = std::queue<T>();
-    std::mutex m();
-    std::condition_variable c();
-  }
-
-  ~ThreadSafeQueue(void)
-  {}
-
-  void enqueue(T t)
-  {
+  void enqueue(const T& t) {
     std::lock_guard<std::mutex> lock(m);
     q.push(t);
     c.notify_one();
   }
 
-  T dequeue(void)
-  {
+  void enqueue(T&& t) {
+    std::lock_guard<std::mutex> lock(m);
+    q.push(t);
+    c.notify_one();
+  }
+
+  T dequeue(void) {
 
     //Get a lock on the mutex
     std::unique_lock<std::mutex> lock(m);
@@ -43,7 +40,8 @@ public:
     {
       c.wait(lock);
     }
-    T val = q.front();
+
+    T val = std::move(q.front());
     q.pop();
 
     return val;

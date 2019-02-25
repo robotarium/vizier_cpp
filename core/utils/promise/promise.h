@@ -21,7 +21,7 @@ public:
 
   ~Promise(void) {}
 
-  int wait() {
+  T wait() {
     std::unique_lock<std::mutex> lock(m);
 
     // While our condition isn't satisfied, wait on the lock.  Protects against
@@ -30,11 +30,13 @@ public:
     {
       c.wait(lock);
     }
+
     return cv;
   }
 
   void fulfill(T val) {
     std::lock_guard<std::mutex> lock(m);
+
     if(cv != NULL) {
       throw 1;
     }

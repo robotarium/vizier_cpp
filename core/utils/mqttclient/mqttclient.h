@@ -10,44 +10,40 @@
 #include <iostream>
 #include <functional>
 
+
+
 class MQTTClient {
 
 private:
 
-  class DataTuple {
+  /**
+   * Local class to hold data
+   */
+  /*class DataTuple {
   public:
     std::string topic;
     std::string message;
 
     DataTuple() = default;
-    DataTuple(std::string topic, std::string message) {
-      this->topic = topic;
-      this->message = message;
-    }
+    DataTuple(std::string topic, std::string message) : topic(topic), message(message) {};
 
     bool operator ==(const DataTuple& b) const{
       return this->topic == b.topic && this->message == b.message;
     }
-  };
+  };*/
 
   std::string host;
-  DataTuple empty;
-  ThreadSafeQueue<DataTuple> q;
+  int port;
+
+  std::pair<std::string, std::string> empty;
+  ThreadSafeQueue<std::pair<std::string, std::string>> q;
   std::thread runner;
   std::unordered_map<std::string, std::function<void(std::string, std::string)>> subscriptions;
-  int port;
   struct mosquitto* mosq;
 
 public:
 
-  MQTTClient(std::string host, int port) {
-
-    ThreadSafeQueue<DataTuple> q;
-
-    // TODO: Fix worst singleton pattern ever
-    //if(global_client == NULL) {
-    //  global_client = this;
-    //}
+  MQTTClient(const std::string& host, int port) {
 
     this->host = host;
     this->port = port;
@@ -87,32 +83,39 @@ public:
 
   void publish_loop(void) {
     while(true) {
-      DataTuple message = q.dequeue();
+      auto message = q.dequeue();
+
       if(message == this->empty) {
         std::cout << "Stopping MQTT client publisher..." << std::endl;
         break;
       }
-      mosquitto_publish(mosq, NULL, message.topic.c_str() , message.message.length(), message.message.c_str(), 1, false);
+
+      mosquitto_publish(mosq, NULL, message.first.c_str() , message.second.length(), message.first.c_str(), 1, false);
     }
   }
 
   //TODO: Implement subscribe method!
-  void subscribe(std::string topic, std::function<void(std::string, std::string)> f) {
+  void subscribe(const std::string& topic, const std::function<void(std::string, std::string)>& f) {
     //Struct, ?, topic string, QOS
     this->subscriptions[topic] = f;
     mosquitto_subscribe(mosq, NULL, topic.c_str(), 1);
   }
 
-  void unsubscribe(std::string topic) {
+  void unsubscribe(const std::string& topic) {
     mosquitto_unsubscribe(mosq, NULL, topic.c_str());
     this->subscriptions.erase(topic.c_str());
   }
 
-  void async_publish(const std::string topic, const std::string message) {
-    DataTuple dt(topic, message);
-    //std::shared_ptr<DataTuple> msg = std::make_shared<DataTuple>(topic, message);
+  void async_publish(const std::string& topic, const std::string& message) {
+    std::pair<std::string, std::string> data = {topic, message};
+
+    if(data == this->empty) {
+      // log?
+      return;
+    }
+
     // We can just move this in b.c. we don't care about dt in this scope anymore
-    q.enqueue(std::move(dt));
+    q.enqueue(std::move(data));
   }
 
 private:
