@@ -1,5 +1,5 @@
-#ifndef TSQUEUE_H
-#define TSQUEUE_H
+#ifndef VIZIER_TSQUEUE_H
+#define VIZIER_TSQUEUE_H
 
 #include <queue>
 #include <mutex>

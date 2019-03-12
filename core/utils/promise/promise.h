@@ -1,5 +1,5 @@
-#ifndef PROMISE_H
-#define PROMISE_h
+#ifndef VIZIER_PROMISE_H
+#define VIZIER_PROMISE_h
 
 #include <mutex>
 #include <condition_variable>

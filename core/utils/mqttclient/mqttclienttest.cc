@@ -1,9 +1,15 @@
 #include <mqttclient.h>
 #include <iostream>
+#include <chrono>
 
+
+auto start = std::chrono::steady_clock::now();
 
 void callback(std::string topic, std::string message) {
+  auto now = std::chrono::steady_clock::now();
+  std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() << std::endl;
   std::cout << topic << ": " << message << std::endl;
+  start = now;
 }
 
 //std::function<void(std::string)> stdf_callback = &callback;

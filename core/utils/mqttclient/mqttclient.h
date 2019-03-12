@@ -1,5 +1,6 @@
-#ifndef MQTT_CLIENT_H
-#define MQTT_CLIENT_H
+#ifndef VIZIER_MQTT_CLIENT_H
+#define VIZIER_MQTT_CLIENT_H
+
 
 #include <unordered_map>
 #include <string>
@@ -12,14 +13,12 @@
 #include <spdlog/spdlog.h>
 
 
-
 class MQTTClient {
 
 private:
 
   std::string host;
   int port;
-
   std::pair<std::string, std::string> empty;
   ThreadSafeQueue<std::pair<std::string, std::string>> q;
   std::thread runner;
@@ -28,7 +27,7 @@ private:
 
 public:
 
-  MQTTClient(const std::string& host, int port) {
+  MQTTClient(const std::string& host, const int port) {
 
     this->host = host;
     this->port = port;
@@ -67,7 +66,10 @@ public:
   void start() {
     runner = std::thread(&MQTTClient::publish_loop, this);
   }
-
+  
+  /**
+   *  Passed to a thread when the class is initialized.  Handles publication of messages from queue. 
+   * */
   void publish_loop(void) {
     while(true) {
       auto message = q.dequeue();
@@ -81,7 +83,6 @@ public:
     }
   }
 
-  //TODO: Implement subscribe method!
   void subscribe(const std::string& topic, const std::function<void(std::string, std::string)>& f) {
     //Struct, ?, topic string, QOS
     this->subscriptions[topic] = f;
@@ -97,7 +98,7 @@ public:
     std::pair<std::string, std::string> data = {topic, message};
 
     if(data == this->empty) {
-      // log?
+      spdlog::warn("Cannot publish empty message.");
       return;
     }
 
