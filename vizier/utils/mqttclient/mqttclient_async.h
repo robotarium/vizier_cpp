@@ -63,10 +63,16 @@ public:
   }
 
   ~MQTTClientAsync(void) {
+
+    // Enqueue poison pill for modifications thread
     this->q.enqueue(this->empty);
     runner.join();
+
+    // Enqueue poison pill for modifications thread
     this->modifications.enqueue(NULL);
     this->modification_thread.join();
+
+    // Clean up mosquitto library
     mosquitto_destroy(mosq);
     mosquitto_lib_cleanup();
   }
@@ -160,10 +166,6 @@ private:
     };
 
     this->modifications.enqueue(std::move(mod));
-
-    // if(this->subscriptions.find(message->topic) != this->subscriptions.end()) {
-      // this->subscriptions[message->topic](std::string((char*) message->topic), std::string((char*) message->payload));
-    // }
   }
 
   static void message_callback_static(struct mosquitto* mosq, void* userdata, const struct mosquitto_message* message) {
