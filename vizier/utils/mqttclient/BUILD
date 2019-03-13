@@ -1,6 +1,6 @@
 cc_library(
     name = "mqttclient",
-    hdrs = ["mqttclient.h"],
+    hdrs = ["mqttclient.h", "mqttclient_async.h"],
     linkopts = ["-pthread", "-lmosquitto"],
     includes = ["."],
     deps = [
@@ -12,6 +12,15 @@ cc_library(
 cc_binary(
     name = "mqttclienttest",
     srcs = ["mqttclienttest.cc"],
+    deps = [
+        ":mqttclient",
+        "@spdlog//:spdlog",
+    ],
+)
+
+cc_binary(
+    name = "mqttclienttestasync",
+    srcs = ["mqttclienttest_async.cc"],
     deps = [
         ":mqttclient",
         "@spdlog//:spdlog",

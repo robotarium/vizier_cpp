@@ -1,5 +1,5 @@
-#ifndef VIZIER_MQTT_CLIENT_H
-#define VIZIER_MQTT_CLIENT_H
+#ifndef VIZIER_MQTT_CLIENT_ASYNC_H
+#define VIZIER_MQTT_CLIENT_ASYNC_H
 
 
 #include <unordered_map>
@@ -13,21 +13,27 @@
 #include <spdlog/spdlog.h>
 
 
-class MQTTClient {
+class MQTTClientAsync {
 
 private:
 
   std::string host;
   int port;
+
   std::pair<std::string, std::string> empty;
   ThreadSafeQueue<std::pair<std::string, std::string>> q;
   std::thread runner;
+
+  ThreadSafeQueue<std::function<void()>> modifications;
+  std::thread modification_thread;
+
   std::unordered_map<std::string, std::function<void(std::string, std::string)>> subscriptions;
+
   struct mosquitto* mosq;
 
 public:
 
-  MQTTClient(const std::string& host, const int port) {
+  MQTTClientAsync(const std::string& host, const int port) {
 
     this->host = host;
     this->port = port;
@@ -52,19 +58,22 @@ public:
     spdlog::info("Connected to MQTT broker at host: {0}, port: {1}", host, port);
 
     //Set message callback and start the loop!
-    mosquitto_message_callback_set(mosq, &MQTTClient::message_callback_static);
+    mosquitto_message_callback_set(mosq, &MQTTClientAsync::message_callback_static);
     mosquitto_loop_start(mosq);
   }
 
-  ~MQTTClient(void) {
+  ~MQTTClientAsync(void) {
     this->q.enqueue(this->empty);
     runner.join();
+    this->modifications.enqueue(NULL);
+    this->modification_thread.join();
     mosquitto_destroy(mosq);
     mosquitto_lib_cleanup();
   }
 
   void start() {
-    runner = std::thread(&MQTTClient::publish_loop, this);
+    runner = std::thread(&MQTTClientAsync::publish_loop, this);
+    modification_thread = std::thread(&MQTTClientAsync::modify_loop, this);
   }
   
   /**
@@ -75,7 +84,7 @@ public:
       auto message = q.dequeue();
 
       if(message == this->empty) {
-        spdlog::info('Stopping publish thread');
+        spdlog::info("Stopping publication thread");
         break;
       }
 
@@ -83,25 +92,51 @@ public:
     }
   }
 
-  void subscribe(const std::string& topic, const std::function<void(std::string, std::string)>& f) {
+  /**
+   *  Passed to a thread to handle modifications to the client 
+   * */
+  void modify_loop(void) {
+    while(true) {
+      auto mod = modifications.dequeue();
 
-    // Locking order would be THIS -> CLIENT
-    this->subscriptions[topic] = f;
+      if(mod == NULL) {
+        spdlog::info("Stopping modification thread");
+        break;
+      }
+
+      mod();
+    }
+  }
+
+  void subscribe(const std::string& topic, const std::function<void(std::string, std::string)>& f) {
     //Struct, ?, topic string, QOS
-    mosquitto_subscribe(mosq, NULL, topic.c_str(), 1);
+
+    auto mod = [this, topic, f]() {
+      // Can move b.c. don't care about f anymore, and we copied it to the function
+      this->subscriptions[topic] = std::move(f);
+      mosquitto_subscribe(this->mosq, NULL, topic.c_str(), 1);
+    };
+
+    this->modifications.enqueue(std::move(mod));
+
+    //this->subscriptions[topic] = f;
+    //mosquitto_subscribe(mosq, NULL, topic.c_str(), 1);
   }
 
   void unsubscribe(const std::string& topic) {
-    // Can unsubscribe safely, as STL contains support one simultaneous writer.  As such, 
-    mosquitto_unsubscribe(mosq, NULL, topic.c_str());
-    this->subscriptions.erase(topic.c_str());
+    auto mod = [this, topic]() {
+      this->subscriptions.erase(topic.c_str());
+      mosquitto_unsubscribe(mosq, NULL, topic.c_str());
+    };
+
+    this->modifications.enqueue(std::move(mod));
   }
 
   void async_publish(const std::string& topic, const std::string& message) {
     std::pair<std::string, std::string> data = {topic, message};
 
     if(data == this->empty) {
-      spdlog::warn("Cannot publish empty message.");
+      spdlog::warn("Cannot publish empty message");
       return;
     }
 
@@ -114,13 +149,25 @@ private:
   // Callback for handling incoming MQTT messages
   void message_callback(struct mosquitto *mosq, const struct mosquitto_message *message) {
     // This should be threadsafe, since stl containers support multiple readers
-    if(this->subscriptions.find(message->topic) != this->subscriptions.end()) {
-      this->subscriptions[message->topic](std::string((char*) message->topic), std::string((char*) message->payload));
-    }
+
+    std::string topic((char*) message->topic);
+    std::string payload((char*) message->payload);
+
+    auto mod = [this, topic, payload] {
+      if(this->subscriptions.find(topic) != this->subscriptions.end()) {
+        this->subscriptions[topic](topic, payload);
+      }
+    };
+
+    this->modifications.enqueue(std::move(mod));
+
+    // if(this->subscriptions.find(message->topic) != this->subscriptions.end()) {
+      // this->subscriptions[message->topic](std::string((char*) message->topic), std::string((char*) message->payload));
+    // }
   }
 
   static void message_callback_static(struct mosquitto* mosq, void* userdata, const struct mosquitto_message* message) {
-	  static_cast<MQTTClient*>(userdata)->message_callback(mosq, message);
+	  static_cast<MQTTClientAsync*>(userdata)->message_callback(mosq, message);
   }
 };
 
