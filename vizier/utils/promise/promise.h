@@ -8,41 +8,44 @@ template <class T>
 class Promise {
 
 private:
-  T cv;
+  T value = NULL;
   mutable std::mutex m;
   std::condition_variable c;
 
 public:
-  Promise(void) {
-    cv = NULL;
-    m = std::mutex();
-    c = std::condition_variable();
-  }
+  Promise() = default; 
+  //{
+    //value = NULL;
+    //m = std::mutex();
+    //c = std::condition_variable();
+  //}
 
   ~Promise(void) {}
 
   T wait() {
-    std::unique_lock<std::mutex> lock(m);
+    std::unique_lock<std::mutex> lock(this->m);
 
     // While our condition isn't satisfied, wait on the lock.  Protects against
     // Spurious wake-ups
-    while(cv == NULL)
+    while(this->value == NULL)
     {
-      c.wait(lock);
+      this->c.wait(lock);
     }
 
-    return cv;
+    return this->value;
   }
 
-  void fulfill(T val) {
+  bool fulfill(T val) {
     std::lock_guard<std::mutex> lock(m);
 
-    if(cv != NULL) {
-      throw 1;
+    if(val != NULL) {
+      return false;
     }
     
-    cv = val;
-    c.notify_all();
+    this->value = val;
+    this->c.notify_all();
+
+    return true;
   }
 };
 #endif
