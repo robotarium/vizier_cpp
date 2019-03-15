@@ -46,11 +46,13 @@ public:
 
     mosq = mosquitto_new("overhead_tracker", clean_session, this);
 
+    //  TODO: Actual exception handling
     if(!mosq){
       spdlog::error("Could not allocate memory");
       throw 1;
     }
 
+    //  TODO: Actualy exception handling
     if(mosquitto_connect_bind(mosq, host.c_str(), port, keepalive, NULL)) {
       spdlog::error("Unable to connect to MQTT broker at host {0} port {1}", host, port);
       throw 2;
@@ -58,7 +60,7 @@ public:
 
     spdlog::info("Connected to MQTT broker at host: {0}, port: {1}", host, port);
 
-    //Set message callback and start the loop!
+    //  Set message callback and start the loop!
     mosquitto_message_callback_set(mosq, &MqttClientAsync::message_callback_static);
     mosquitto_connect_callback_set(mosq,&MqttClientAsync::reconnect_callback_static);
     mosquitto_loop_start(mosq);
@@ -66,50 +68,52 @@ public:
 
   ~MqttClientAsync(void) {
 
-    // Enqueue poison pill for modifications thread
+    //  Enqueue poison pill for modifications thread
     this->q.enqueue(this->empty);
     runner.join();
 
-    // Enqueue poison pill for modifications thread
+    //  Enqueue poison pill for modifications thread
     this->modifications.enqueue(NULL);
     this->modification_thread.join();
 
-    // Clean up mosquitto library
+    //  Clean up mosquitto library
     mosquitto_destroy(mosq);
     mosquitto_lib_cleanup();
   }
 
-  // Starts all of the interal threads associated with the MQTT client
+  //  Starts all of the interal threads associated with the MQTT client
   void start() {
     runner = std::thread(&MqttClientAsync::publish_loop, this);
     modification_thread = std::thread(&MqttClientAsync::modify_loop, this);
   }
 
-  // Places a callback onto a particular topic such that every message to that topic is passed to callback
+  //  Places a callback onto a particular topic such that every message to that topic is passed to callback
+  //
   //  Args:
   //    topic: topic to which the MQTT client subscribes
   //    f: callback for the topic
   void subscribe_with_callback(const std::string& topic, const std::function<void(std::string, std::string)>& f) {
     auto mod = [this, topic, f]() {
-      // Can move b.c. don't care about f anymore, and we copied it to the function
+      //  Can move b.c. don't care about f anymore, and we copied it to the function
       this->subscriptions[topic] = std::move(f);
-      //Struct, ?, topic string, QOS
+      //  Struct, ?, topic string, QOS
       mosquitto_subscribe(this->mosq, NULL, topic.c_str(), 0);
     };
 
     this->modifications.enqueue(std::move(mod));
   }
 
-  // Version of subscribe that also takes a pointer to a promise to indicate when the subscription has been completed
-  // Args:
-  //  topic: see subscribe_with_callback
-  //  f: see subscribe_with_callback 
-  //  p_ptr: shared pointer to promise that is fulfilled when the subscription completes
+  //  Version of subscribe that also takes a pointer to a promise to indicate when the subscription has been completed
+  //
+  //  Args:
+  //    topic: see subscribe_with_callback
+  //    f: see subscribe_with_callback 
+  //    p_ptr: shared pointer to promise that is fulfilled when the subscription completes
   void subscribe_with_callback(const std::string& topic, const std::function<void(std::string, std::string)>& f, std::shared_ptr<std::promise<bool>> p_ptr) {
     auto mod = [this, topic, f, p_ptr]() {
-      // Can move b.c. don't care about f anymore, and we copied it to the function
+      //  Can move b.c. don't care about f anymore, and we copied it to the function
       this->subscriptions[topic] = std::move(f);
-      //Struct, ?, topic string, QOS
+      //  Struct, ?, topic string, QOS
       mosquitto_subscribe(this->mosq, NULL, topic.c_str(), 0);
 
       p_ptr->set_value(true);
@@ -168,9 +172,9 @@ public:
     this->modifications.enqueue(std::move(mod));
   }
 
-  // Like MqttClientAsync::unsubscribe but with a promise to indicate when the operation has been completed.
-  // Args:
-  //  topic: topic from which the MQTT client unsubscribes
+  //  Like MqttClientAsync::unsubscribe but with a promise to indicate when the operation has been completed.
+  //  Args:
+  //    topic: topic from which the MQTT client unsubscribes
   void unsubscribe(const std::string& topic, std::shared_ptr<std::promise<bool>> p_ptr) {
     auto mod = [this, topic, p_ptr]() {
       this->subscriptions.erase(topic.c_str());
@@ -182,6 +186,11 @@ public:
     this->modifications.enqueue(std::move(mod));
   }
 
+  //  Publishes a message asynchronously across the network by passing the work to a thread 
+  //
+  //  Args:
+  //    topic: topic on which the message is published
+  //    message: message to be published on the topic
   void async_publish(const std::string& topic, const std::string& message) {
     std::pair<std::string, std::string> data = {topic, message};
 
@@ -245,6 +254,12 @@ private:
     this->modifications.enqueue(std::move(mod));
   }
 
+  //  Static callback to be passed to C-implemented MQTT client.  Userdata is always "this"
+  //
+  //  Args:
+  //    mosq: C-implemented MQTT client
+  //    userdata: always "this"
+  //    message: message received from subscribed topic
   static void message_callback_static(struct mosquitto* mosq, void* userdata, const struct mosquitto_message* message) {
 	  static_cast<MqttClientAsync*>(userdata)->message_callback(mosq, message);
   }
@@ -263,7 +278,7 @@ private:
     }
   }
 
-  // Passed to a thread when the class is initialized.  Handles publication of messages from queue. 
+  //  Passed to a thread when the class is initialized.  Handles publication of messages from queue. 
   void publish_loop(void) {
     while(true) {
       auto message = q.dequeue();

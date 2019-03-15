@@ -17,15 +17,20 @@ public:
   ThreadSafeQueue() = default;
   ~ThreadSafeQueue() = default;
 
+  int size() {
+    std::lock_guard<std::mutex> lock(m);
+    return q.size();
+  }
+
   void enqueue(const T& t) {
     std::lock_guard<std::mutex> lock(m);
     q.push(t);
     c.notify_one();
   }
 
-  void enqueue(T&& t) {
+  void enqueue(const T&& t) {
     std::lock_guard<std::mutex> lock(m);
-    q.push(t);
+    q.push(std::move(t));
     c.notify_one();
   }
 

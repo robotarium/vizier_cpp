@@ -7,6 +7,7 @@ cc_library(
             "//vizier/utils/promise:promise",
             "//vizier/utils/tsqueue:tsqueue",
     ],
+    visibility = ["//visibility:public"],
 )
 
 cc_binary(

@@ -4,6 +4,8 @@
 #include <mutex>
 #include <condition_variable>
 
+//  TODO: Delete this class since std::promise
+
 template <class T> 
 class Promise {
 
