@@ -92,7 +92,7 @@ public:
   //  Args:
   //    topic: topic to which the MQTT client subscribes
   //    f: callback for the topic
-  void subscribe_with_callback(const std::string& topic, const std::function<void(std::string, std::string)>& f) {
+  /*void subscribe_with_callback(const std::string& topic, const std::function<void(std::string, std::string)>& f) {
     auto mod = [this, topic, f]() {
       //  Can move b.c. don't care about f anymore, and we copied it to the function
       this->subscriptions[topic] = std::move(f);
@@ -101,7 +101,7 @@ public:
     };
 
     this->modifications.enqueue(std::move(mod));
-  }
+  }*/
 
   //  Version of subscribe that also takes a pointer to a promise to indicate when the subscription has been completed
   //
@@ -109,17 +109,24 @@ public:
   //    topic: see subscribe_with_callback
   //    f: see subscribe_with_callback 
   //    p_ptr: shared pointer to promise that is fulfilled when the subscription completes
-  void subscribe_with_callback(const std::string& topic, const std::function<void(std::string, std::string)>& f, std::shared_ptr<std::promise<bool>> p_ptr) {
-    auto mod = [this, topic, f, p_ptr]() {
+  bool subscribe_with_callback(const std::string& topic, const std::function<void(std::string, std::string)>& f) {
+    auto prom = std::make_shared<std::promise<bool>>();
+    auto mod = [this, topic, f, prom]() {
       //  Can move b.c. don't care about f anymore, and we copied it to the function
       this->subscriptions[topic] = std::move(f);
       //  Struct, ?, topic string, QOS
       mosquitto_subscribe(this->mosq, NULL, topic.c_str(), 0);
 
-      p_ptr->set_value(true);
+      prom->set_value(true);
     };
 
+    
     this->modifications.enqueue(std::move(mod));
+
+    auto fut = prom->get_future();
+    fut.wait();
+
+    return fut.get();
   }
 
   //  Version of subscribe that returns a queue containing incoming messages
@@ -129,16 +136,16 @@ public:
   //
   //  Returns:
   //    A pointer to queue of incoming messages 
-  std::shared_ptr<ThreadSafeQueue<std::string>> subscribe(const std::string& topic) {
+  std::pair<std::shared_ptr<ThreadSafeQueue<std::string>>, bool> subscribe(const std::string& topic) {
     std::shared_ptr<ThreadSafeQueue<std::string>> q_ptr = std::make_shared<ThreadSafeQueue<std::string>>();
 
     auto f = [q_ptr](std::string t, std::string msg) {
       q_ptr->enqueue(msg);
     };
 
-    this->subscribe_with_callback(topic, std::move(f));
+    bool ok = this->subscribe_with_callback(topic, std::move(f));
 
-    return q_ptr;
+    return {q_ptr, ok};
   }
 
   //  Version of subscribe that returns a queue containing incoming messages that also takes a promise pointer to indicate when the subscription has been completed
@@ -148,7 +155,7 @@ public:
   //
   //  Returns:
   //    see subscribe
-  std::shared_ptr<ThreadSafeQueue<std::string>> subscribe(const std::string& topic, const std::shared_ptr<std::promise<bool>> p_ptr) {
+  /*std::shared_ptr<ThreadSafeQueue<std::string>> subscribe(const std::string& topic, const std::shared_ptr<std::promise<bool>> p_ptr) {
     std::shared_ptr<ThreadSafeQueue<std::string>> q_ptr = std::make_shared<ThreadSafeQueue<std::string>>();
 
     auto f = [q_ptr](std::string t, std::string msg) {
@@ -158,24 +165,32 @@ public:
     this->subscribe_with_callback(topic, std::move(f), p_ptr);
 
     return q_ptr;
-  }
+  }*/
 
   //  Unsubscribes the MQTT client from a topic.  Removes any callbacks associated with that topic.  If topic is not subscribed to, does nothing
   //  Args:
   //    topic: topic from which the MQTT client unsubscribes
-  void unsubscribe(const std::string& topic) {
-    auto mod = [this, topic]() {
+  bool unsubscribe(const std::string& topic) {
+    auto prom = std::make_shared<std::promise<bool>>();
+    auto mod = [this, topic, prom]() {
       this->subscriptions.erase(topic.c_str());
       mosquitto_unsubscribe(mosq, NULL, topic.c_str());
+
+      prom->set_value(true);
     };
 
     this->modifications.enqueue(std::move(mod));
+    
+    auto fut = prom->get_future();
+    fut.wait();
+
+    return fut.get();
   }
 
   //  Like MqttClientAsync::unsubscribe but with a promise to indicate when the operation has been completed.
   //  Args:
   //    topic: topic from which the MQTT client unsubscribes
-  void unsubscribe(const std::string& topic, std::shared_ptr<std::promise<bool>> p_ptr) {
+  /*void unsubscribe(const std::string& topic, std::shared_ptr<std::promise<bool>> p_ptr) {
     auto mod = [this, topic, p_ptr]() {
       this->subscriptions.erase(topic.c_str());
       mosquitto_unsubscribe(mosq, NULL, topic.c_str());
@@ -184,7 +199,7 @@ public:
     };
 
     this->modifications.enqueue(std::move(mod));
-  }
+  }*/
 
   //  Publishes a message asynchronously across the network by passing the work to a thread 
   //
@@ -192,6 +207,10 @@ public:
   //    topic: topic on which the message is published
   //    message: message to be published on the topic
   void async_publish(const std::string& topic, const std::string& message) {
+    this->async_publish(topic, std::move(std::string(message)));
+  }
+
+  void async_publish(const std::string& topic, std::string&& message) {
     std::pair<std::string, std::string> data = {topic, message};
 
     if(data == this->empty) {
@@ -278,7 +297,7 @@ private:
     }
   }
 
-  //  Passed to a thread when the class is initialized.  Handles publication of messages from queue. 
+  //  Passed to a thread when the class is initialized.  Handles publication of messages from queue.  Always publishes with QoS 0
   void publish_loop(void) {
     while(true) {
       auto message = q.dequeue();
@@ -288,7 +307,7 @@ private:
         break;
       }
 
-      mosquitto_publish(mosq, NULL, message.first.c_str() , message.second.length(), message.first.c_str(), 1, false);
+      mosquitto_publish(mosq, NULL, message.first.c_str() , message.second.length(), message.second.c_str(), 0, false);
     }
   }
 };
