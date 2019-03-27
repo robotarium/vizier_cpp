@@ -13,6 +13,6 @@ new_http_archive(
 new_http_archive(
     name = "json",
     urls = ["https://github.com/nlohmann/json/archive/develop.zip"],
-    #strip_prefix = "spdlog-1.x",
+    strip_prefix = "json-develop",
     build_file = "BUILD.njson",
 )

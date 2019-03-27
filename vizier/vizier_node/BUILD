@@ -1,8 +1,6 @@
 cc_library(
     name = "vizier_node",
     hdrs = ["vizier_node.h"],
-    #linkopts = ["-pthread", "-lmosquitto"],
-    includes = ["."],
     deps = [
             "//vizier/utils/mqttclient:mqttclient",
     ],
@@ -10,9 +8,9 @@ cc_library(
 
 cc_binary(
     name = "vizier_node_test",
-    srcs = ["vizier_node.cpp"],
+    srcs = ["vizier_node_test.cpp"],
     deps = [
-        ":mqttclient",
+        ":vizier_node",
         "@json//:json",
     ],
 )
