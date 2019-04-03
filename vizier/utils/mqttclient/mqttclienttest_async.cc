@@ -2,7 +2,6 @@
 #include <iostream>
 #include <chrono>
 
-
 auto start = std::chrono::steady_clock::now();
 
 void callback(std::string topic, std::string message) {

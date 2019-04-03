@@ -75,7 +75,7 @@ public:
       auto message = q.dequeue();
 
       if(message == this->empty) {
-        spdlog::info('Stopping publish thread');
+        spdlog::info("Stopping publish thread");
         break;
       }
 
@@ -101,7 +101,7 @@ public:
     std::pair<std::string, std::string> data = {topic, message};
 
     if(data == this->empty) {
-      spdlog::warn("Cannot publish empty message.");
+      spdlog::warn("Cannot publish empty message");
       return;
     }
 
