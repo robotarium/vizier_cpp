@@ -1,14 +1,10 @@
 #include "vizier/vizier_node/vizier_node.h"
+#include "gtest/gtest.h"
 #include <iostream>
 
 
-void test_create_message_id() {
-    for(int i = 0; i < 10; ++i) {
-        std::cout << vizier::create_message_id() << std::endl;
+TEST(CreateMessageIdtest, CreatesCorrectIdLength) {
+    for(int i = 0; i < 100; ++i) {
+        EXPECT_EQ(vizier::create_message_id().length(), 64);
     }
-}
-
-int main() {
-    test_create_message_id();
-    return 0;
 }

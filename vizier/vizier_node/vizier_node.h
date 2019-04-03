@@ -102,21 +102,31 @@ std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(c
     }
 
     if(descriptor.count("links") == 0 || descriptor["links"].size() == 0) {
-        if(descriptor["links"].size() == 0) {
-            if(descriptor.count("type") == 1) {
-                return {{link, static_cast<std::string>(descriptor["type"])}, true};
-            } else {
-                // This is an error.  Leaf links must contain a type
-                return{{}, false};
-            }
-        } 
+        if(descriptor.count("type") == 1) {
+            std::pair<std::unordered_map<std::string, std::string>, bool> ret;
+            ret.first = {{link, static_cast<std::string>(descriptor["type"])}};
+            ret.second = true;
+            return ret;
+        } else {
+            // This is an error.  Leaf links must contain a type
+            return{{}, false};
+        }
     } else {
         // Links is nonempty
         std::unordered_map<std::string, std::string> parsed_links;
+        //auto items = descriptor["links"].items();
+        //std::for_each(items.begin(), items.end(), [&path, &link](const auto& item) parse_descriptor(item.key(), item.value()));
         for(const auto& item : descriptor["links"].items()) {
-            parse_descriptor(path+"/"+link, item.key(), item.value());
+            auto pl = parse_descriptor(path+"/"+link, item.key(), item.value());
+            if(!pl.second) {
+                return {{}, false};
+            }
+
+            parsed_links.insert(pl.first.begin(), pl.first.end());
         }
+
+        return {parsed_links, true};
     }
-} 
+}
 
 } // vizier namespace

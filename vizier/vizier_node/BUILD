@@ -9,8 +9,10 @@ cc_library(
 cc_binary(
     name = "vizier_node_test",
     srcs = ["vizier_node_test.cpp"],
+    copts = ["-Iexternal/gtest/include"],
     deps = [
         ":vizier_node",
         "@json//:json",
+        "@gtest//:main",
     ],
 )

@@ -2,7 +2,6 @@ cc_library(
     name = "mqttclient",
     hdrs = ["mqttclient.h", "mqttclient_async.h"],
     linkopts = ["-pthread", "-lmosquitto"],
-    includes = ["."],
     deps = [
             "//vizier/utils/promise:promise",
             "//vizier/utils/tsqueue:tsqueue",
