@@ -15,7 +15,7 @@ This repo requires the libraries
 
 To install mosquitto run
 ```
-	sudo apt-get install mosquitto
+	sudo apt-get install libmosquitto-dev
 ```
 
 The pthread library should already be installed.  Bazel automatically pulls in the other dependencies on compilation.
@@ -30,7 +30,8 @@ This project is compiled with Bazel.  For more information, see [https://bazel.b
 
 Navigate to the home directory and run 
 ```
-	bazel build //vizier...
+	bazel build //vizier/vizier_node:*
 ```
+to compile all modules in that directory.
 
 
