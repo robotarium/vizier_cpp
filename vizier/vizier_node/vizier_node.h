@@ -72,6 +72,7 @@ json create_request(std::string id, std::string method, std::string link, json b
             {"body", std::move(body)}};
 }
 
+//  Returns true if path is a subpath of link.
 bool is_subpath_of(const std::string& link, const std::string& path) {
 
     // Path has to be a subset of link, so it can't be longer
@@ -79,32 +80,39 @@ bool is_subpath_of(const std::string& link, const std::string& path) {
         return false;
     }
 
-    return link.substr(path.length()) == path;
+    // Edge case
+    if(path.length() == 0) {
+        return true;
+    }
+
+    return link.substr(0, path.length()) == path;
 }
 
-std::string to_absolute_path(const std::string& base, const std::string& path) {
+std::string to_absolute_path(std::string base, std::string path) {
+
     if(path.length() == 0) {
         return base;
     }
 
     if(path[0] == '/') {
-        return base + path;
+        return std::move(base) + std::move(path);
     } else {
         return path;
     }
 }
 
-std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(const std::string& path, const std::string& link, json& descriptor) {
-    //link_here = combine_paths(path, link);
+std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(const std::string& path, const std::string& link, const json& descriptor) {
 
-    if(!is_subpath_of(link, path)) {
+    auto link_here = to_absolute_path(path, link);
+
+    if(!is_subpath_of(link_here, path)) {
            return {{}, false};
     }
 
     if(descriptor.count("links") == 0 || descriptor["links"].size() == 0) {
         if(descriptor.count("type") == 1) {
             std::pair<std::unordered_map<std::string, std::string>, bool> ret;
-            ret.first = {{link, static_cast<std::string>(descriptor["type"])}};
+            ret.first = {{link_here, static_cast<std::string>(descriptor["type"])}};
             ret.second = true;
             return ret;
         } else {
@@ -114,10 +122,9 @@ std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(c
     } else {
         // Links is nonempty
         std::unordered_map<std::string, std::string> parsed_links;
-        //auto items = descriptor["links"].items();
-        //std::for_each(items.begin(), items.end(), [&path, &link](const auto& item) parse_descriptor(item.key(), item.value()));
+
         for(const auto& item : descriptor["links"].items()) {
-            auto pl = parse_descriptor(path+"/"+link, item.key(), item.value());
+            auto pl = parse_descriptor(link_here, item.key(), item.value());
             if(!pl.second) {
                 return {{}, false};
             }
@@ -127,6 +134,19 @@ std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(c
 
         return {parsed_links, true};
     }
+}
+
+std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(const json& descriptor) {
+
+    if(descriptor.count("endpoint") == 0) {
+        return {{}, false};
+    }
+
+    if(descriptor.count("requests") == 0) {
+
+    }
+
+    return parse_descriptor("", descriptor["endpoint"], descriptor); 
 }
 
 } // vizier namespace
