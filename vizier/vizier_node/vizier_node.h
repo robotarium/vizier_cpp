@@ -5,20 +5,27 @@
 #include "vizier/vizier_node/utils.h"
 #include "spdlog/spdlog.h"
 #include "vizier/utils/mqttclient/mqttclient_async.h"
+#include <unordered_set>
 
 using json = nlohmann::json;
-using namespace vizier;
+
+namespace vizier {
 
 class VizierNode {
 private:
     const std::string host_;
     const int port_;
-    json descriptor_;
+    const json descriptor_;
     std::string request_link_;
+    mutable MqttClientAsync mqtt_client_;
 
-    MqttClientAsync mqtt_client_;
-    std::unordered_map<std::string, std::string> expanded_links_;
-    std::vector<std::string> requests_;
+    std::unordered_map<std::string, LinkType> expanded_links_;
+    std::unordered_map<std::string, LinkType> requests_;
+    //std::vector<std::string> requests_;
+    std::unordered_set<std::string> puttable_links;
+    std::unordered_set<std::string> publishable_links;
+    std::unordered_set<std::string> gettable_links;
+    std::unordered_set<std::string> subscribable_links;
 
 public:
     VizierNode(const std::string& host, const int port, const json& descriptor) 
@@ -26,12 +33,8 @@ public:
     host_(host),
     port_(port),
     descriptor_(descriptor),
-    mqtt_client_(host, port)
+    mqtt_client_(host, port) 
     {
-        //this->port_ = port;
-        //this->host_ = host;
-        //this->descriptor_ = descriptor;
-
         bool ok;
         std::tie(this->expanded_links_, ok) = parse_descriptor(descriptor);
         if(!ok) {
@@ -39,8 +42,21 @@ public:
             throw(std::runtime_error("Invalid node descriptor"));
         }
 
+        // On which links can we publish?
+        for(const std::pair<std::string, LinkType>& item : this->expanded_links_) {
+           if(item.second == LinkType::DATA) {
+               this->puttable_links.insert(item.first);
+           } 
+
+           if(item.second == LinkType::STREAM) {
+               this->publishable_links.insert(item.first);
+           }
+        }
+
         this->requests_ = get_requests_from_descriptor(descriptor);
     } 
 };
+
+} // namespace vizier
 
 #endif

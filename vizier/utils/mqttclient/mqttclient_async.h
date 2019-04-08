@@ -62,7 +62,7 @@ public:
 
     //  Set message callback and start the loop!
     mosquitto_message_callback_set(mosq, &MqttClientAsync::message_callback_static);
-    mosquitto_connect_callback_set(mosq,&MqttClientAsync::reconnect_callback_static);
+    mosquitto_connect_callback_set(mosq, &MqttClientAsync::reconnect_callback_static);
     mosquitto_loop_start(mosq);
   }
 

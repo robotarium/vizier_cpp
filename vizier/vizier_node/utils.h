@@ -46,7 +46,12 @@ namespace {
         std::generate_n(str.begin(), length, rand_char);
         return str;
     }
-} // anon namespace
+} // namespace
+
+enum class LinkType {
+    DATA,
+    STREAM
+};
 
 //  Creates a unique message ID for a request
 //  
@@ -134,7 +139,7 @@ std::string to_absolute_path(std::string base, std::string path) {
     }
 }
 
-std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(const std::string& path, const std::string& link, const json& descriptor) {
+std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(const std::string& path, const std::string& link, const json& descriptor) {
 
     auto link_here = to_absolute_path(path, link);
 
@@ -144,17 +149,26 @@ std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(c
 
     if(descriptor.count("links") == 0 || descriptor["links"].size() == 0) {
         if(descriptor.count("type") == 1) {
-            std::pair<std::unordered_map<std::string, std::string>, bool> ret;
-            ret.first = {{link_here, descriptor["type"]}};
-            ret.second = true;
+            std::pair<std::unordered_map<std::string, LinkType>, bool> ret;
+
+            if(descriptor["type"] == "STREAM") {
+                ret.first = {{link_here, LinkType::STREAM}};
+                ret.second = true;
+            } else if(descriptor["type"] == "DATA") {
+                ret.first = {{link_here, LinkType::DATA}};
+                ret.second = true;
+            } else {
+                ret = {{}, false};
+            }
+
             return ret;
         } else {
             // This is an error.  Leaf links must contain a type
-            return{{}, false};
+            return {{}, false};
         }
     } else {
         // Links is nonempty
-        std::unordered_map<std::string, std::string> parsed_links;
+        std::unordered_map<std::string, LinkType> parsed_links;
 
         for(const auto& item : descriptor["links"].items()) {
             auto pl = parse_descriptor(link_here, item.key(), item.value());
@@ -170,7 +184,7 @@ std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(c
     }
 }
 
-std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(const json& descriptor) {
+std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(const json& descriptor) {
 
     if(descriptor.count("endpoint") == 0) {
         return {{}, false};
@@ -179,6 +193,7 @@ std::pair<std::unordered_map<std::string, std::string>, bool> parse_descriptor(c
     return parse_descriptor("", descriptor["endpoint"], descriptor); 
 }
 
+//TODO: Make this return a UM<string, Linktype>
 std::vector<std::string> get_requests_from_descriptor(const json& descriptor) {
 
     if(descriptor.count("requests") == 0) {

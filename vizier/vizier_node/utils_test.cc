@@ -68,11 +68,11 @@ TEST(ParseNodeDescriptor, Basic) {
         {"requests", ""}
     };
 
-    std::unordered_map<std::string, std::string> expected = {
-        {"node/0", "STREAM"}
+    std::unordered_map<std::string, vizier::LinkType> expected = {
+        {"node/0", vizier::LinkType::STREAM}
     };
 
-    std::unordered_map<std::string, std::string> result;
+    std::unordered_map<std::string, vizier::LinkType> result;
     bool ok;
     std::tie(result, ok) = vizier::parse_descriptor(descriptor);
 
@@ -102,12 +102,12 @@ TEST(ParseNodeDescriptor, Intermediate) {
         {"requests", ""}
     };
 
-    std::unordered_map<std::string, std::string> expected = {
-        {"node/0", "STREAM"},
-        {"node/1/2", "DATA"}
+    std::unordered_map<std::string, vizier::LinkType> expected = {
+        {"node/0", vizier::LinkType::STREAM},
+        {"node/1/2", vizier::LinkType::DATA}
     };
 
-    std::unordered_map<std::string, std::string> result;
+    std::unordered_map<std::string, vizier::LinkType> result;
     bool ok;
     std::tie(result, ok) = vizier::parse_descriptor(descriptor);
 
