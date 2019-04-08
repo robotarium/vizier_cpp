@@ -1,4 +1,4 @@
-#include "vizier/vizier_node/vizier_node.h"
+#include "vizier/vizier_node/utils.h"
 #include "nlohmann/json.hpp"
 #include "gtest/gtest.h"
 #include <iostream>
@@ -77,5 +77,76 @@ TEST(ParseNodeDescriptor, Basic) {
     std::tie(result, ok) = vizier::parse_descriptor(descriptor);
 
     EXPECT_TRUE(ok);
+    EXPECT_EQ(expected, result);
+}
+
+TEST(ParseNodeDescriptor, Intermediate) {
+    json descriptor = {
+
+        {"endpoint", "node"},
+        {
+            "links", 
+            {
+                {"/0", {{"type", "STREAM"}}},
+                {"/1", 
+                    {
+                        {"links", 
+                            {
+                                {"/2", {{"type", "DATA"}}}
+                            }
+                        }
+                    }
+                }
+            } 
+        },
+        {"requests", ""}
+    };
+
+    std::unordered_map<std::string, std::string> expected = {
+        {"node/0", "STREAM"},
+        {"node/1/2", "DATA"}
+    };
+
+    std::unordered_map<std::string, std::string> result;
+    bool ok;
+    std::tie(result, ok) = vizier::parse_descriptor(descriptor);
+
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(expected, result);
+} 
+
+TEST(GetRequestsFromDesriptor, EmptyRequests) {
+    json descriptor = {
+        {"requests", {}}
+    };
+
+    std::vector<std::string> expected;
+
+    auto result = vizier::get_requests_from_descriptor(descriptor);
+
+    EXPECT_EQ(expected, result);
+}
+
+TEST(GetRequestsFromDesriptor, NonemptyRequests) {
+
+    std::vector<std::string> expected = {"1/test", "2/test"};
+
+    json descriptor = {
+        {"requests", expected}
+    };
+
+    auto result = vizier::get_requests_from_descriptor(descriptor);
+
+    EXPECT_EQ(expected, result);
+}
+
+TEST(GetRequestsFromDesriptor, NoRequests) {
+
+    std::vector<std::string> expected;
+
+    json descriptor = {{}};
+
+    auto result = vizier::get_requests_from_descriptor(descriptor);
+
     EXPECT_EQ(expected, result);
 }

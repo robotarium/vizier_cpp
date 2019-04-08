@@ -5,6 +5,7 @@ cc_library(
     deps = [
             "//vizier/utils/promise:promise",
             "//vizier/utils/tsqueue:tsqueue",
+            "@spdlog//:spdlog"
     ],
     visibility = ["//visibility:public"],
 )
