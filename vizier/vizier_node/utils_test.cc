@@ -31,15 +31,15 @@ TEST(CreateResponse, CreatesCorrectResponse) {
         {"type", "STREAM"}
     };
 
-    EXPECT_EQ(expected, vizier::create_response("1", body, "DATA"));
-    EXPECT_EQ(expected2, vizier::create_response("2", body, "STREAM"));
+    EXPECT_EQ(expected, vizier::create_response("1", body, vizier::LinkType::DATA));
+    EXPECT_EQ(expected2, vizier::create_response("2", body, vizier::LinkType::STREAM));
 }
 
 TEST(CreateResponse, CreatesCorrectResponseFuzzy) {
     for(int i = 0; i < FUZZY_LENGTH; ++i) {
 
         auto status = vizier::random_string(FUZZY_LENGTH, vizier::rand_char);
-        auto type = vizier::random_string(FUZZY_LENGTH, vizier::rand_char);
+        auto type = "DATA";
 
         json body = {
             {"msg", 1}
@@ -51,7 +51,7 @@ TEST(CreateResponse, CreatesCorrectResponseFuzzy) {
             {"type", type}
         };
 
-        EXPECT_EQ(expected, vizier::create_response(status, body, type));
+        EXPECT_EQ(expected, vizier::create_response(status, body, vizier::LinkType::DATA));
     }
 }
 
@@ -120,7 +120,7 @@ TEST(GetRequestsFromDesriptor, EmptyRequests) {
         {"requests", {}}
     };
 
-    std::vector<std::string> expected;
+    std::vector<vizier::RequestData> expected;
 
     auto result = vizier::get_requests_from_descriptor(descriptor);
 
@@ -129,24 +129,31 @@ TEST(GetRequestsFromDesriptor, EmptyRequests) {
 
 TEST(GetRequestsFromDesriptor, NonemptyRequests) {
 
-    std::vector<std::string> expected = {"1/test", "2/test"};
-
-    json descriptor = {
-        {"requests", expected}
+    //std::vector<std::string> expected = {"1/test", "2/test"};
+    std::vector<vizier::RequestData> expected = {{"1/test", false, vizier::LinkType::DATA}, {"2/test", true, vizier::LinkType::STREAM}};
+    json descriptor;
+    descriptor["requests"] = {
+        {
+            {"link", "1/test"},
+            {"type", "DATA"},
+            {"required", false}
+        },
+        {
+            {"link", "2/test"},
+            {"type", "STREAM"},
+            {"required", true}
+        },
     };
 
     auto result = vizier::get_requests_from_descriptor(descriptor);
-
     EXPECT_EQ(expected, result);
 }
 
 TEST(GetRequestsFromDesriptor, NoRequests) {
 
-    std::vector<std::string> expected;
+    std::vector<vizier::RequestData> expected;
 
-    json descriptor = {{}};
-
+    json descriptor = {};
     auto result = vizier::get_requests_from_descriptor(descriptor);
-
     EXPECT_EQ(expected, result);
 }

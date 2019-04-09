@@ -7,10 +7,12 @@
 #include <random>
 #include <functional> // for std::function
 #include <algorithm>  // for std::generate_n
+#include <string>
 
 namespace vizier {
 
 using json = nlohmann::json;
+using string = std::string;
 
 namespace {
     std::vector<char> charset() {
@@ -50,8 +52,43 @@ namespace {
 
 enum class LinkType {
     DATA,
-    STREAM
+    STREAM,
 };
+
+string link_type_to_str(const LinkType& type) {
+    switch(type) {
+        case LinkType::DATA:
+            return "DATA";
+        break;
+
+        case LinkType::STREAM:
+            return "STREAM";
+        break;
+
+        default:
+            return "DATA";
+    };
+}
+
+enum class Methods {
+    GET,
+    PUT,
+};
+
+string methods_to_str(const Methods& method) {
+    switch(method) {
+        case Methods::GET:
+            return "GET";
+        break;
+
+        case Methods::PUT:
+            return "PUT";
+        break;
+
+        default:
+            return "GET";
+    }
+}
 
 //  Creates a unique message ID for a request
 //  
@@ -65,9 +102,9 @@ std::string create_message_id() {
 //  
 //  Returns:
 //      A JSON object containing the keys: status, body, type
-json create_response(std::string status, json body, std::string topic_type) {
+json create_response(std::string status, json body, LinkType topic_type) {
     // TODO: Convert to const& ?
-    return {{"status", std::move(status)}, {"body", std::move(body)}, {"type", std::move(topic_type)}};
+    return {{"status", std::move(status)}, {"body", std::move(body)}, {"type", link_type_to_str(topic_type)}};
 }
 
 //  Creates a response link for a node
@@ -90,15 +127,15 @@ std::string create_request_link(std::string node) {
 //  
 //  Args:
 //      id: id for the request.  Should be large and random
-//      method: must be GET || PUT
+//      method: must be in Methods enum
 //      link: link on which to make the request
 //      body: body for the request.  
 //
 //  Returns:
 //      A JSON object representing the request with the keys: id, method, link, body
-json create_request(std::string id, std::string method, std::string link, json body) {
+json create_request(std::string id, Methods method, std::string link, json body) {
     return {{"id", std::move(id)}, 
-            {"method", std::move(method)}, 
+            {"method", methods_to_str(method)}, 
             {"link", std::move(link)}, 
             {"body", std::move(body)}};
 }
@@ -139,6 +176,7 @@ std::string to_absolute_path(std::string base, std::string path) {
     }
 }
 
+// TODO: Just throw something if parsing fails
 std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(const std::string& path, const std::string& link, const json& descriptor) {
 
     auto link_here = to_absolute_path(path, link);
@@ -151,6 +189,7 @@ std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(cons
         if(descriptor.count("type") == 1) {
             std::pair<std::unordered_map<std::string, LinkType>, bool> ret;
 
+            // Convert string descriptor to enum type
             if(descriptor["type"] == "STREAM") {
                 ret.first = {{link_here, LinkType::STREAM}};
                 ret.second = true;
@@ -190,22 +229,62 @@ std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(cons
         return {{}, false};
     }
 
-    return parse_descriptor("", descriptor["endpoint"], descriptor); 
+    return parse_descriptor("", descriptor["endpoint"], descriptor);
 }
 
-//TODO: Make this return a UM<string, Linktype>
-std::vector<std::string> get_requests_from_descriptor(const json& descriptor) {
+struct RequestData {
+    string link;
+    bool required;
+    LinkType type;
+};
+
+bool operator== (const RequestData& a, const RequestData& b) {
+    return (a.link == b.link) && (a.required == b.required) && (a.type == b.type);
+}
+
+std::vector<RequestData> get_requests_from_descriptor(const json& descriptor) {
 
     if(descriptor.count("requests") == 0) {
         return {};
     }
 
-    std::vector<std::string> ret;
+    std::vector<RequestData> ret;
     auto req = descriptor["requests"];
 
     // Will throw if not a string
     for(const auto& item : req) {
-       ret.push_back(item);
+        // Each item should be a map with keys link, required, type 
+
+        if(item.count("type") == 0) {
+            throw(std::runtime_error("Request must contain type key"));
+        }
+
+        if(item.count("link") == 0) {
+            throw(std::runtime_error("Request must contain link key"));
+        }
+
+        RequestData to_add;
+        to_add.link = item["link"];
+                
+        if(item.count("required") == 0) {
+            to_add.required = false;
+        } else {
+            to_add.required = item["required"];
+        }
+
+        // Convert type field to upper for convenience
+        string upper_type(item["type"]);
+        std::for_each(upper_type.begin(), upper_type.end(), [](char& c) {c = toupper(c);});
+
+        if(upper_type == "DATA") {
+            to_add.type = LinkType::DATA;
+        } else if(upper_type == "STREAM") {
+            to_add.type = LinkType::STREAM;
+        } else {
+            throw(std::runtime_error("Request type must be STREAM or DATA"));
+        }
+
+        ret.push_back(to_add);
     }
 
     return ret;
