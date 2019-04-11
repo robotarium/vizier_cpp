@@ -50,10 +50,18 @@ namespace {
     }
 } // namespace
 
+//  Link types for node descriptor
 enum class LinkType {
     DATA,
     STREAM,
 };
+
+//  Request types for links
+enum class Methods {
+    GET,
+    PUT,
+};
+
 
 string link_type_to_str(const LinkType& type) {
     switch(type) {
@@ -69,11 +77,6 @@ string link_type_to_str(const LinkType& type) {
             return "DATA";
     };
 }
-
-enum class Methods {
-    GET,
-    PUT,
-};
 
 string methods_to_str(const Methods& method) {
     switch(method) {
@@ -112,7 +115,7 @@ json create_response(std::string status, json body, LinkType topic_type) {
 //  Returns:
 //      The response link for the node
 std::string create_response_link(std::string node, std::string message_id) {
-   return std::move(node) + "/" + "responses/" + std::move(message_id);
+   return std::move(node) + "/responses/" + std::move(message_id);
 }
 
 //  Creates a request link for a node
@@ -176,7 +179,7 @@ std::string to_absolute_path(std::string base, std::string path) {
     }
 }
 
-// TODO: Just throw something if parsing fails
+//  TODO: Just throw something if parsing fails
 std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(const std::string& path, const std::string& link, const json& descriptor) {
 
     auto link_here = to_absolute_path(path, link);
@@ -233,16 +236,16 @@ std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(cons
 }
 
 struct RequestData {
-    string link;
-    bool required;
-    LinkType type;
+    string link = "";
+    bool required = false;
+    LinkType type = LinkType::STREAM;
 };
 
 bool operator== (const RequestData& a, const RequestData& b) {
     return (a.link == b.link) && (a.required == b.required) && (a.type == b.type);
 }
 
-std::vector<RequestData> get_requests_from_descriptor(const json& descriptor) {
+std::vector<RequestData> get_requests_from_descriptor(const json& descriptor) noexcept(false) {
 
     if(descriptor.count("requests") == 0) {
         return {};
@@ -273,6 +276,7 @@ std::vector<RequestData> get_requests_from_descriptor(const json& descriptor) {
         }
 
         // Convert type field to upper for convenience
+        // This will throw if item["type"] is not a string
         string upper_type(item["type"]);
         std::for_each(upper_type.begin(), upper_type.end(), [](char& c) {c = toupper(c);});
 
