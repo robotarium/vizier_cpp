@@ -69,7 +69,7 @@ public:
         string reserved = this->endpoint_ + "/" + "node_descriptor";
         if(this->puttable_links_.find(reserved) != this->puttable_links_.end()) {
             spdlog::error("Reserved link: " + reserved + " found in puttable links.  Deleting");
-            this->puttable_links_.erase(this->endpoint_+"/"+"node_descriptor");
+            this->puttable_links_.erase(this->endpoint_+"/node_descriptor");
         }
 
         // Set up remote links
