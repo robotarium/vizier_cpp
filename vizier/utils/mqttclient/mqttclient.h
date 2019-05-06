@@ -1,7 +1,6 @@
 #ifndef VIZIER_MQTT_CLIENT_H
 #define VIZIER_MQTT_CLIENT_H
 
-
 #include <unordered_map>
 #include <string>
 #include <mosquitto.h>
@@ -12,22 +11,23 @@
 #include <functional>
 #include <spdlog/spdlog.h>
 
+using string = std::string;
 
 class MQTTClient {
 
 private:
 
-  std::string host;
+  string host;
   int port;
-  std::pair<std::string, std::string> empty;
-  ThreadSafeQueue<std::pair<std::string, std::string>> q;
+  std::pair<string, string> empty;
+  ThreadSafeQueue<std::pair<string, string>> q;
   std::thread runner;
-  std::unordered_map<std::string, std::function<void(std::string, std::string)>> subscriptions;
+  std::unordered_map<string, std::function<void(string, string)>> subscriptions;
   struct mosquitto* mosq;
 
 public:
 
-  MQTTClient(const std::string& host, const int port) {
+  MQTTClient(const string& host, const int port) {
 
     this->host = host;
     this->port = port;
@@ -35,6 +35,7 @@ public:
     int keepalive = 20;
     bool clean_session = true;
 
+    // TODO:  Move this code into ::start so that we can catch errors easily
     mosquitto_lib_init();
 
     mosq = mosquitto_new("overhead_tracker", clean_session, this);
@@ -83,7 +84,7 @@ public:
     }
   }
 
-  void subscribe(const std::string& topic, const std::function<void(std::string, std::string)>& f) {
+  void subscribe(const string& topic, const std::function<void(string, string)>& f) {
 
     // Locking order would be THIS -> CLIENT
     this->subscriptions[topic] = f;
@@ -91,14 +92,14 @@ public:
     mosquitto_subscribe(mosq, NULL, topic.c_str(), 1);
   }
 
-  void unsubscribe(const std::string& topic) {
+  void unsubscribe(const string& topic) {
     // Can unsubscribe safely, as STL contains support one simultaneous writer.  As such, 
     mosquitto_unsubscribe(mosq, NULL, topic.c_str());
     this->subscriptions.erase(topic.c_str());
   }
 
-  void async_publish(const std::string& topic, const std::string& message) {
-    std::pair<std::string, std::string> data = {topic, message};
+  void async_publish(const string& topic, const string& message) {
+    std::pair<string, string> data = {topic, message};
 
     if(data == this->empty) {
       spdlog::warn("Cannot publish empty message");
@@ -115,7 +116,7 @@ private:
   void message_callback(struct mosquitto *mosq, const struct mosquitto_message *message) {
     // This should be threadsafe, since stl containers support multiple readers
     if(this->subscriptions.find(message->topic) != this->subscriptions.end()) {
-      this->subscriptions[message->topic](std::string((char*) message->topic), std::string((char*) message->payload));
+      this->subscriptions[message->topic](string((char*) message->topic), string((char*) message->payload));
     }
   }
 
