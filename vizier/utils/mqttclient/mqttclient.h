@@ -35,7 +35,6 @@ public:
     int keepalive = 20;
     bool clean_session = true;
 
-    // TODO:  Move this code into ::start so that we can catch errors easily
     mosquitto_lib_init();
 
     mosq = mosquitto_new("overhead_tracker", clean_session, this);

@@ -43,6 +43,8 @@ public:
     int keepalive = 20;
     bool clean_session = true;
 
+    // PUT ALL OF THIS INTO A START METHOD TO AVOID EXCEPTIONS
+
     // TODO:  Move this into ::start so we can remove exceptions!!!
     mosquitto_lib_init();
 
