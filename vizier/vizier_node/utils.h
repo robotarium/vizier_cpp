@@ -6,13 +6,36 @@
 #include <vector>
 #include <random>
 #include <functional> // for std::function
-#include <algorithm>  // for std::generate_n
-#include <string>
+#include <algorithm>  // for std::generate_n #include <string>
+#include <optional>
+#include <spdlog/spdlog.h>
 
 namespace vizier {
 
 using json = nlohmann::json;
 using string = std::string;
+
+//  Link types for node descriptor
+enum class LinkType {
+    DATA,
+    STREAM,
+};
+
+//  Request types for links
+enum class Methods {
+    GET,
+    PUT,
+};
+
+struct RequestData {
+    string link = "";
+    bool required = false;
+    LinkType type = LinkType::STREAM;
+};
+
+template <class T, class U> using unordered_map = std::unordered_map<T, U>;
+template<class T> using vector = std::vector<T>;
+template<class T> using optional = std::optional<T>;
 
 namespace {
     std::vector<char> charset() {
@@ -49,19 +72,6 @@ namespace {
         return str;
     }
 } // namespace
-
-//  Link types for node descriptor
-enum class LinkType {
-    DATA,
-    STREAM,
-};
-
-//  Request types for links
-enum class Methods {
-    GET,
-    PUT,
-};
-
 
 string link_type_to_str(const LinkType& type) {
     switch(type) {
@@ -105,9 +115,9 @@ std::string create_message_id() {
 //  
 //  Returns:
 //      A JSON object containing the keys: status, body, type
-json create_response(std::string status, json body, LinkType topic_type) {
+json create_response(const std::string& status, json body, const LinkType& topic_type) {
     // TODO: Convert to const& ?
-    return {{"status", std::move(status)}, {"body", std::move(body)}, {"type", link_type_to_str(topic_type)}};
+    return {{"status", status}, {"body", std::move(body)}, {"type", link_type_to_str(topic_type)}};
 }
 
 //  Creates a response link for a node
@@ -180,7 +190,7 @@ std::string to_absolute_path(std::string base, std::string path) {
 }
 
 //  TODO: Just throw something if parsing fails
-std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(const std::string& path, const std::string& link, const json& descriptor) {
+/*std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(const std::string& path, const std::string& link, const json& descriptor) {
 
     auto link_here = to_absolute_path(path, link);
 
@@ -224,31 +234,79 @@ std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(cons
 
         return {parsed_links, true};
     }
+}*/
+
+optional<unordered_map<std::string, LinkType>> parse_descriptor(const std::string& path, const std::string& link, const json& descriptor) {
+
+    auto link_here = to_absolute_path(path, link);
+
+    if(!is_subpath_of(link_here, path)) {
+        return std::nullopt;
+    }
+
+    if(descriptor.count("links") == 0 || descriptor["links"].size() == 0) {
+        if(descriptor.count("type") == 1) {
+
+            // Convert string descriptor to enum type
+            if(descriptor["type"] == "STREAM") {
+                return unordered_map<string, LinkType>({{link_here, LinkType::STREAM}});
+            } else if(descriptor["type"] == "DATA") {
+                return unordered_map<string, LinkType>({{link_here, LinkType::DATA}});
+            } else {
+                return std::nullopt;
+            }
+
+            //return ret;
+        } else {
+            // This is an error.  Leaf links must contain a type
+            return std::nullopt;
+            //return {{}, false};
+        }
+    } else {
+        // Links is nonempty
+        std::unordered_map<std::string, LinkType> parsed_links;
+
+        for(const auto& item : descriptor["links"].items()) {
+            optional<unordered_map<string, LinkType>> pl = parse_descriptor(link_here, item.key(), item.value());
+
+            if(!pl) {
+                return std::nullopt;
+            }
+
+            parsed_links.insert(pl->begin(), pl->end()); 
+        }
+
+        return parsed_links;
+    }
 }
 
-std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(const json& descriptor) {
+/*std::pair<std::unordered_map<std::string, LinkType>, bool> parse_descriptor(const json& descriptor) {
 
     if(descriptor.count("endpoint") == 0) {
         return {{}, false};
     }
 
     return parse_descriptor("", descriptor["endpoint"], descriptor);
-}
+}*/
 
-struct RequestData {
-    string link = "";
-    bool required = false;
-    LinkType type = LinkType::STREAM;
-};
+optional<unordered_map<std::string, LinkType>> parse_descriptor(const json& descriptor) {
+
+    if(descriptor.count("endpoint") == 0) {
+        spdlog::error("Node descriptor must contain key 'endpoint'");
+        return std::nullopt;
+    }
+
+    return parse_descriptor("", descriptor["endpoint"], descriptor);
+}
 
 bool operator== (const RequestData& a, const RequestData& b) {
     return (a.link == b.link) && (a.required == b.required) && (a.type == b.type);
 }
 
-std::vector<RequestData> get_requests_from_descriptor(const json& descriptor) noexcept(false) {
+optional<vector<RequestData>> get_requests_from_descriptor(const json& descriptor) {
 
     if(descriptor.count("requests") == 0) {
-        return {};
+        return vector<RequestData>();
     }
 
     std::vector<RequestData> ret;
@@ -259,11 +317,15 @@ std::vector<RequestData> get_requests_from_descriptor(const json& descriptor) no
         // Each item should be a map with keys link, required, type 
 
         if(item.count("type") == 0) {
-            throw(std::runtime_error("Request must contain type key"));
+            spdlog::error("Request must contain key 'type'");
+            return std::nullopt;
+            //throw(std::runtime_error("Request must contain type key"));
         }
 
         if(item.count("link") == 0) {
-            throw(std::runtime_error("Request must contain link key"));
+            spdlog::error("Request must contain key 'link'");
+            return std::nullopt;
+            //throw(std::runtime_error("Request must contain link key"));
         }
 
         RequestData to_add;

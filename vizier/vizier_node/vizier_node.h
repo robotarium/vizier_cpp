@@ -48,6 +48,7 @@ public:
         this->endpoint_ = descriptor.count("endpoint");
 
         bool ok;
+
         std::tie(this->expanded_links_, ok) = parse_descriptor(descriptor);
 
         if(!ok) {

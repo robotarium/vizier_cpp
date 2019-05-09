@@ -72,12 +72,13 @@ TEST(ParseNodeDescriptor, Basic) {
         {"node/0", vizier::LinkType::STREAM}
     };
 
-    std::unordered_map<std::string, vizier::LinkType> result;
-    bool ok;
-    std::tie(result, ok) = vizier::parse_descriptor(descriptor);
+    //std::unordered_map<std::string, vizier::LinkType> result;
+    //bool ok;
+    auto result = vizier::parse_descriptor(descriptor);
+    //std::tie(result, ok) = vizier::parse_descriptor(descriptor);
 
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(expected, result);
+    EXPECT_TRUE(bool(result));
+    EXPECT_EQ(expected, result.value());
 }
 
 TEST(ParseNodeDescriptor, Intermediate) {
@@ -107,12 +108,13 @@ TEST(ParseNodeDescriptor, Intermediate) {
         {"node/1/2", vizier::LinkType::DATA}
     };
 
-    std::unordered_map<std::string, vizier::LinkType> result;
-    bool ok;
-    std::tie(result, ok) = vizier::parse_descriptor(descriptor);
+    //std::unordered_map<std::string, vizier::LinkType> result;
+    //bool ok;
+    //std::tie(result, ok) = vizier::parse_descriptor(descriptor);
+    auto result = vizier::parse_descriptor(descriptor);
 
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(expected, result);
+    EXPECT_TRUE(bool(result));
+    EXPECT_EQ(expected, result.value());
 } 
 
 TEST(GetRequestsFromDesriptor, EmptyRequests) {
@@ -129,7 +131,7 @@ TEST(GetRequestsFromDesriptor, EmptyRequests) {
 
 TEST(GetRequestsFromDesriptor, NonemptyRequests) {
 
-    //std::vector<std::string> expected = {"1/test", "2/test"};
+    //std::vector<sAd::string> expected = {"1/test", "2/test"};
     std::vector<vizier::RequestData> expected = {{"1/test", false, vizier::LinkType::DATA}, {"2/test", true, vizier::LinkType::STREAM}};
     json descriptor;
     descriptor["requests"] = {
@@ -146,7 +148,7 @@ TEST(GetRequestsFromDesriptor, NonemptyRequests) {
     };
 
     auto result = vizier::get_requests_from_descriptor(descriptor);
-    EXPECT_EQ(expected, result);
+    EXPECT_EQ(expected, result.value());
 }
 
 TEST(GetRequestsFromDesriptor, NoRequests) {
@@ -155,5 +157,5 @@ TEST(GetRequestsFromDesriptor, NoRequests) {
 
     json descriptor = {};
     auto result = vizier::get_requests_from_descriptor(descriptor);
-    EXPECT_EQ(expected, result);
+    EXPECT_EQ(expected, result.value());
 }
