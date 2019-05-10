@@ -13,13 +13,17 @@ void callback(std::string topic, std::string message) {
 
 std::function<void(std::string, std::string)> stdf_callback = callback;
 
-int main(void) {
+int main() {
 
   std::string topic = "test_topic";
 
   MqttClientAsync m("192.168.1.8", 1884);
 
-  m.start();
+  if(!m.start()) {
+    return -1;
+  }
+
+  std::cout << "Started mqtt client" << std::endl;
 
   bool ok = m.subscribe_with_callback(topic, stdf_callback);
   if(!ok) {
@@ -38,6 +42,7 @@ int main(void) {
   for(int i = 0; i < 1500; ++i) {
     message += "a";
   }
+
   while(true) {
     //std::string message = q_ptr->dequeue();
     m.async_publish(topic, message);
