@@ -4,6 +4,10 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <chrono>
+#include <optional>
+
+template<class T> using optional = std::optional<T>;
 
 template <class T> 
 class ThreadSafeQueue {
@@ -28,27 +32,48 @@ public:
     c.notify_one();
   }
 
-  void enqueue(const T&& t) {
+  void enqueue(T&& t) {
     std::lock_guard<std::mutex> lock(m);
     q.push(std::move(t));
     c.notify_one();
   }
 
-  T dequeue(void) {
+  T dequeue() {
 
     //Get a lock on the mutex
     std::unique_lock<std::mutex> lock(m);
 
     // While our condition isn't satisfied, wait on the lock.  Protects against
     // Spurious wake-ups
-    while(q.empty())
-    {
+    while(q.empty()) {
       c.wait(lock);
     }
 
     T val = std::move(q.front());
     q.pop();
 
+    return val;
+  }
+
+  optional<T> dequeue(std::chrono::milliseconds timeout) {
+    std::unique_lock<std::mutex> lock(m);
+
+    // While our condition isn't satisfied, wait on the lock.  Protects against
+    // Spurious wake-ups
+    std::cv_status result;
+    while(q.empty()) {
+      // TODO: Shorten timeout if spurious wakeup
+      result = c.wait_for(lock, timeout);
+    }
+
+    if(result == std::cv_status::timeout) {
+      return std::nullopt;     
+    }
+
+    T val = std::move(q.front());
+    q.pop();
+
+    // Constructs to optional
     return val;
   }
 };

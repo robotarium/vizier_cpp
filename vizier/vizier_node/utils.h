@@ -67,8 +67,8 @@ namespace {
         return ch_set[dist(rng)];
     }
 
-    std::string random_string(size_t length, std::function<char(void)> rand_char) {
-        std::string str(length, 0);
+    string random_string(size_t length, std::function<char(void)> rand_char) {
+        string str(length, 0);
         std::generate_n(str.begin(), length, rand_char);
         return str;
     }
@@ -108,7 +108,7 @@ string methods_to_str(const Methods& method) {
 //  
 //  Returns:
 //      A secure, random 64-byte message ID
-std::string create_message_id() {
+string create_message_id() {
     return random_string(64, rand_char);
 }
 
@@ -116,7 +116,7 @@ std::string create_message_id() {
 //  
 //  Returns:
 //      A JSON object containing the keys: status, body, type
-json create_response(const std::string& status, json body, const LinkType& topic_type) {
+json create_response(const string& status, json body, const LinkType& topic_type) {
     // TODO: Convert to const& ?
     return {{"status", status}, {"body", std::move(body)}, {"type", link_type_to_str(topic_type)}};
 }
@@ -125,7 +125,7 @@ json create_response(const std::string& status, json body, const LinkType& topic
 // 
 //  Returns:
 //      The response link for the node
-std::string create_response_link(std::string node, std::string message_id) {
+string create_response_link(string node, string message_id) {
    return std::move(node) + "/responses/" + std::move(message_id);
 }
 
@@ -133,7 +133,7 @@ std::string create_response_link(std::string node, std::string message_id) {
 //
 //  Returns:
 //      The request link for a node
-std::string create_request_link(std::string node) {
+string create_request_link(string node) {
     return std::move(node) + "/requests";
 }
 
@@ -147,11 +147,13 @@ std::string create_request_link(std::string node) {
 //
 //  Returns:
 //      A JSON object representing the request with the keys: id, method, link, body
-json create_request(std::string id, Methods method, std::string link, json body) {
-    return {{"id", std::move(id)}, 
-            {"method", methods_to_str(method)}, 
-            {"link", std::move(link)}, 
-            {"body", std::move(body)}};
+json create_request(string id, Methods method, string link, json body) {
+    // TODO: REMOVE BODY IF METHOD IS PUT
+    return {
+        {"id": id},
+        {"method", methods_to_str(method)}, 
+        {"link", std::move(link)}, 
+        {"body", std::move(body)}};
 }
 
 //  Returns true if path is a subpath of link.
@@ -162,7 +164,7 @@ json create_request(std::string id, Methods method, std::string link, json body)
 //
 //  Returns:
 //      True if path is a subset of link and false otherwise
-bool is_subpath_of(const std::string& link, const std::string& path) {
+bool is_subpath_of(const string& link, const string& path) {
 
     // Path has to be a subset of link, so it can't be longer
     if(path.length() > link.length()) {
@@ -177,7 +179,7 @@ bool is_subpath_of(const std::string& link, const std::string& path) {
     return link.substr(0, path.length()) == path;
 }
 
-std::string to_absolute_path(std::string base, std::string path) {
+string to_absolute_path(string base, string path) {
 
     if(path.length() == 0) {
         return base;
@@ -191,7 +193,7 @@ std::string to_absolute_path(std::string base, std::string path) {
 }
 
 //  TODO: COMMENT
-optional<unordered_map<std::string, LinkType>> parse_descriptor(const std::string& path, const std::string& link, const json& descriptor) {
+optional<unordered_map<string, LinkType>> parse_descriptor(const string& path, const string& link, const json& descriptor) {
 
     auto link_here = to_absolute_path(path, link);
 
@@ -215,7 +217,7 @@ optional<unordered_map<std::string, LinkType>> parse_descriptor(const std::strin
         }
     } else {
         // Links is nonempty
-        std::unordered_map<std::string, LinkType> parsed_links;
+        std::unordered_map<string, LinkType> parsed_links;
 
         for(const auto& item : descriptor["links"].items()) {
             optional<unordered_map<string, LinkType>> pl = parse_descriptor(link_here, item.key(), item.value());
@@ -231,8 +233,8 @@ optional<unordered_map<std::string, LinkType>> parse_descriptor(const std::strin
     }
 }
 
-//  TODO: COmment
-optional<unordered_map<std::string, LinkType>> parse_descriptor(const json& descriptor) {
+//  TODO: Document
+optional<unordered_map<string, LinkType>> parse_descriptor(const json& descriptor) {
 
     if(descriptor.count("endpoint") == 0) {
         spdlog::error("Node descriptor must contain key 'endpoint'");
@@ -246,7 +248,7 @@ bool operator== (const RequestData& a, const RequestData& b) {
     return (a.link == b.link) && (a.required == b.required) && (a.type == b.type);
 }
 
-// TODO: COMMENT
+//  TODO: Document
 optional<vector<RequestData>> get_requests_from_descriptor(const json& descriptor) {
 
     if(descriptor.count("requests") == 0) {

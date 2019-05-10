@@ -7,7 +7,6 @@
 #include <mosquitto.h>
 #include <thread>
 #include <tsqueue.h>
-#include <promise.h>
 #include <iostream>
 #include <functional>
 #include <spdlog/spdlog.h>

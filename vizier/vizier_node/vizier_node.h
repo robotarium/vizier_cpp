@@ -18,10 +18,12 @@ template<class T> using optional = std::optional<T>;
 template<class T> using vector = std::vector<T>;
 template<class T, class U> using unordered_map = std::unordered_map<T, U>;
 template<class T> using unordered_set = std::unordered_set<T>;
+template<class T> using shared_ptr = std::shared_ptr<T>;
+
 
 class VizierNode {
 private:
-    const std::string host_;
+    const string host_;
     const int port_;
     const json descriptor_;
     string request_link_;
@@ -34,13 +36,47 @@ private:
     unordered_set<string> publishable_links_;
     unordered_set<string> gettable_links_;
     unordered_set<string> subscribable_links_;
+    unordered_map<string, string> link_data_;
 
-    string make_request() {
-        return "";
+    optional<json> make_get_request(const string& link, int retries, std::chrono::milliseconds timeout) {
+    
+        string id = create_message_id();
+        json get_request = create_request(id, Methods::GET, link, {});
+        string remote_node = link.substr(link.find_first_of('/'));
+        string response_link = create_response_link(remote_node, id);
+        string request_link = create_request_link(remote_node);
+
+        optional<shared_ptr<ThreadSafeQueue<string>>> maybe_q = this->mqtt_client_.subscribe(resposne_link);
+
+        if(!maybe_q) {
+            return std::nullopt;
+        }
+
+        auto q = maybe_q.value();
+        optional<string> message;
+
+        for(int i = 0; i < retries; ++i) {
+            this->mqtt_client_.async_publish(request_link, get_request.dump());
+            message = q.dequeue(timeout);
+
+            if(!message) {
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        if(!message) {
+            return std::nullopt;
+        }
+        
+        json json_message = json::loads(message);
+
+        return ;
     }
 
 public:
-    VizierNode(const std::string& host, const int port, const json& descriptor) 
+    VizierNode(const string& host, const int port, const json& descriptor) 
     : 
     host_(host),
     port_(port),
@@ -66,7 +102,7 @@ public:
         this->expanded_links_ = result.value();
 
         // On which links can we publish?
-        for(const std::pair<std::string, LinkType>& item : this->expanded_links_) {
+        for(const std::pair<string, LinkType>& item : this->expanded_links_) {
            if(item.second == LinkType::DATA) {
                this->puttable_links_.insert(item.first);
            } 
@@ -105,7 +141,7 @@ public:
 
     void publish(const string& link, string message) {
         if(this->publishable_links_.find(link) == this->publishable_links_.end()) {
-            spdlog::error("Cannot publish on link {0} because it has not been declared as a request of type STREAM", link);
+            spdlog::error("Cannot publish on link {0} because it has not been declared as a link of type STREAM", link);
             return;
         }
 
@@ -115,13 +151,28 @@ public:
     string get(const string& link) {
         if(this->gettable_links_.find(link) == this->gettable_links_.end()) {
             spdlog::error("Cannot get on link {0} because it has not been declared as a request of type DATA", link);
+            return;
         }
 
         return "";
     }
 
-    optional<ThreadSafeQueue<string>> subscribe(const string& link) -> decltype(this->mqtt_client_.subscribe) {
+    optional<ThreadSafeQueue<string>> subscribe(const string& link) {
+        if(this->subscribable_links_.find(link) == this->subscribable_links_.end()) {
+            spdlog::error("Cannot get on link {0} because it has not been declared as a request of type STREAM", link);
+            return std::nullopt;
+        }
 
+        return {};
+    }
+
+    void put(const string& link, string data) {
+        if(this->puttable_links_.find(link) == this->subscribable_links_.end()) {
+           spdlog::error("Cannot put on link {0} because it has not been declared as a link of type DATA", link);
+           return; 
+        }
+
+        // TODO: IMPLEMENT
     }
 };
 
