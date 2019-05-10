@@ -150,7 +150,7 @@ string create_request_link(string node) {
 json create_request(string id, Methods method, string link, json body) {
     // TODO: REMOVE BODY IF METHOD IS PUT
     return {
-        {"id": id},
+        {"id", id},
         {"method", methods_to_str(method)}, 
         {"link", std::move(link)}, 
         {"body", std::move(body)}};
@@ -217,7 +217,7 @@ optional<unordered_map<string, LinkType>> parse_descriptor(const string& path, c
         }
     } else {
         // Links is nonempty
-        std::unordered_map<string, LinkType> parsed_links;
+        unordered_map<string, LinkType> parsed_links;
 
         for(const auto& item : descriptor["links"].items()) {
             optional<unordered_map<string, LinkType>> pl = parse_descriptor(link_here, item.key(), item.value());
@@ -265,13 +265,11 @@ optional<vector<RequestData>> get_requests_from_descriptor(const json& descripto
         if(item.count("type") == 0) {
             spdlog::error("Request must contain key 'type'");
             return std::nullopt;
-            //throw(std::runtime_error("Request must contain type key"));
         }
 
         if(item.count("link") == 0) {
             spdlog::error("Request must contain key 'link'");
             return std::nullopt;
-            //throw(std::runtime_error("Request must contain link key"));
         }
 
         RequestData to_add;
@@ -284,7 +282,6 @@ optional<vector<RequestData>> get_requests_from_descriptor(const json& descripto
         }
 
         // Convert type field to upper for convenience
-        // This will throw if item["type"] is not a string
         string upper_type(item["type"]);
         std::for_each(upper_type.begin(), upper_type.end(), [](char& c) {c = toupper(c);});
 
@@ -293,7 +290,8 @@ optional<vector<RequestData>> get_requests_from_descriptor(const json& descripto
         } else if(upper_type == "STREAM") {
             to_add.type = LinkType::STREAM;
         } else {
-            throw(std::runtime_error("Request type must be STREAM or DATA"));
+            spdlog::error("Request type must be STREAM or DATA");
+            return std::nullopt;
         }
 
         ret.push_back(to_add);
