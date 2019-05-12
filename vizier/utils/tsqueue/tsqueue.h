@@ -7,8 +7,6 @@
 #include <chrono>
 #include <optional>
 
-#include <iostream>
-
 template<class T> using optional = std::optional<T>;
 template<class T> using unique_lock = std::unique_lock<T>;
 using mutex = std::mutex;
@@ -25,7 +23,7 @@ public:
   ThreadSafeQueue() = default;
   ~ThreadSafeQueue() = default;
 
-  int size() {
+  size_t size() {
     std::lock_guard<mutex> lock(m);
     return q.size();
   }
@@ -64,10 +62,9 @@ public:
 
     // While our condition isn't satisfied, wait on the lock.  Protects against
     // Spurious wake-ups
-    std::cv_status result;
     while(q.empty()) {
       // TODO: Shorten timeout if spurious wakeup
-      result = c.wait_for(lock, timeout);
+      std::cv_status result = c.wait_for(lock, timeout);
 
       if(result == std::cv_status::timeout) {
         return std::nullopt;
