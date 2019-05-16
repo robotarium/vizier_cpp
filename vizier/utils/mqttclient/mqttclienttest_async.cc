@@ -1,6 +1,7 @@
 #include "vizier/utils/mqttclient/mqttclient_async.h"
 #include <iostream>
 #include <chrono>
+#include <memory>
 
 auto start = std::chrono::steady_clock::now();
 
@@ -18,6 +19,9 @@ int main() {
   std::string topic = "test_topic";
 
   MqttClientAsync m("192.168.1.8", 1884);
+  std::shared_ptr<MqttClientAsync> ptr = std::make_shared<MqttClientAsync>("192.168.1.8", 1884); 
+  std::unique_ptr<MqttClientAsync> ptr2 = std::make_unique<MqttClientAsync>("192.168.1.8", 1884); 
+
 
   if(!m.start()) {
     return -1;
