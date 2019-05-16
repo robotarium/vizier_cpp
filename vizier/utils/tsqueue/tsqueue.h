@@ -23,6 +23,10 @@ public:
   ThreadSafeQueue() = default;
   ~ThreadSafeQueue() = default;
 
+  /*
+    TODO: Implement move constructor
+  */
+
   size_t size() {
     std::lock_guard<mutex> lock(m);
     return q.size();

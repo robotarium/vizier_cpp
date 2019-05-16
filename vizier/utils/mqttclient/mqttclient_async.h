@@ -47,6 +47,10 @@ public:
     mosquitto_lib_init();
   }
 
+  /*
+    TODO: Implement move constructor
+  */
+
   ~MqttClientAsync(void) {
     //  Enqueue poison pill for modifications thread
     this->q.enqueue(this->empty);
