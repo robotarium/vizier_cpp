@@ -18,18 +18,18 @@ int main() {
 
   std::string topic = "test_topic";
 
-  MqttClientAsync m("192.168.1.8", 1884);
-  std::shared_ptr<MqttClientAsync> ptr = std::make_shared<MqttClientAsync>("192.168.1.8", 1884); 
-  std::unique_ptr<MqttClientAsync> ptr2 = std::make_unique<MqttClientAsync>("192.168.1.8", 1884); 
+  std::unique_ptr<MqttClientAsync> m;
 
-
-  if(!m.start()) {
-    return -1;
+  try {
+    m = std::make_unique<MqttClientAsync>("192.168.1.8", 1884); 
+  } catch (const std::exception& e) {
+    return -1; 
   }
 
   std::cout << "Started mqtt client" << std::endl;
 
-  bool ok = m.subscribe_with_callback(topic, stdf_callback);
+  bool ok = m->subscribe_with_callback(topic, stdf_callback);
+
   if(!ok) {
     return -1;
   }
@@ -49,7 +49,7 @@ int main() {
 
   while(true) {
     //std::string message = q_ptr->dequeue();
-    m.async_publish(topic, message);
+    m->async_publish(topic, message);
     //auto now = std::chrono::steady_clock::now();
     //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() << std::endl;
     //start = now;
@@ -59,7 +59,7 @@ int main() {
 
   //std::this_thread::sleep_for(std::chrono::seconds(500));
 
-  m.unsubscribe(topic);
+  m->unsubscribe(topic);
 
   return 0;
 }

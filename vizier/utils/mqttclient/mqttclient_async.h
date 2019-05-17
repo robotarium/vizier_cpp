@@ -28,23 +28,63 @@ private:
 
   std::pair<string, string> empty;
   ThreadSafeQueue<std::pair<string, string>> q;
-  std::thread runner;
+  std::thread publish_thread;
 
   ThreadSafeQueue<std::function<void()>> modifications;
   std::thread modification_thread;
 
   std::unordered_map<string, std::function<void(string, string)>> subscriptions;
 
-  struct mosquitto* mosq = NULL;
+  struct mosquitto* mosq = nullptr;
 
 public:
 
+  /*
+    TODO: Doc
+
+    Throws:
+      std::runtime_error if the MQTT broker connection fails
+  */
   MqttClientAsync(const string& host, const int port) 
   :
   host(host),
   port(port)  
   {
     mosquitto_lib_init();
+    
+    int keepalive = 20;
+    bool clean_session = true;
+
+    mosq = mosquitto_new("overhead_tracker", clean_session, this);
+
+    if(!mosq){
+      std::string er = "Could not allocate memory for Mosquitto MQTT client";
+      spdlog::error(er);
+
+      mosquitto_lib_cleanup();
+
+      throw std::runtime_error(er);
+    }
+
+    if(mosquitto_connect_bind(mosq, host.c_str(), port, keepalive, NULL)) {
+      spdlog::error("Unable to connect to MQTT broker at host {0} port {1}", host, port);
+      
+      // Destroy memory that we allocated so far
+      mosquitto_destroy(mosq);
+      mosquitto_lib_cleanup();
+
+      throw std::runtime_error("Unable to connect to MQTT broker");
+    }
+
+    spdlog::info("Connected to MQTT broker at host: {0}, port: {1}", host, port);
+
+    //  Set message callback and start the loop!
+    mosquitto_message_callback_set(mosq, &MqttClientAsync::message_callback_static);
+    mosquitto_connect_callback_set(mosq, &MqttClientAsync::reconnect_callback_static);
+    mosquitto_loop_start(mosq);
+
+    this->publish_thread = std::thread(&MqttClientAsync::publish_loop, this);
+    this->modification_thread = std::thread(&MqttClientAsync::modify_loop, this);
   }
 
   /*
@@ -55,8 +95,8 @@ public:
     //  Enqueue poison pill for modifications thread
     this->q.enqueue(this->empty);
 
-    if(runner.joinable()) {
-      runner.join();
+    if(this->publish_thread.joinable()) {
+      this->publish_thread.join();
     }
 
     //  Enqueue poison pill for modifications thread
@@ -74,10 +114,12 @@ public:
     mosquitto_lib_cleanup();
   }
 
+  // TODO: Move this back to constructor.  This implementation pattern is too annoying.  Just ONLY use exceptions
+  // in the constructor...
   // Starts all of the interal threads.
-  bool start() {
-    runner = std::thread(&MqttClientAsync::publish_loop, this);
-    modification_thread = std::thread(&MqttClientAsync::modify_loop, this);
+  /*bool start() {
+    this->publish_thread = std::thread(&MqttClientAsync::publish_loop, this);
+    this->modification_thread = std::thread(&MqttClientAsync::modify_loop, this);
 
     int keepalive = 20;
     bool clean_session = true;
@@ -102,15 +144,15 @@ public:
     mosquitto_loop_start(mosq);
 
     return true;
-  }
+  }*/
 
   // Stops all of the internal threads.
-  void stop() {
+  /*void stop() {
     //  Enqueue poison pill for modifications thread
     this->q.enqueue(this->empty);
 
-    if(runner.joinable()) {
-      runner.join();
+    if(this->publish_thread.joinable()) {
+      this->publish_thread.join();
     }
 
     //  Enqueue poison pill for modifications thread
@@ -119,7 +161,7 @@ public:
     if(this->modification_thread.joinable()) {
       this->modification_thread.join();
     }
-  }
+  }*/
 
   /*  
     Version of subscribe that also takes a pointer to a promise to indicate when the subscription has been completed.  Thread safe

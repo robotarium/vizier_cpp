@@ -25,10 +25,15 @@ TEST(VizierNode, Get) {
     };
     std::string host = "192.168.1.8";
 
-    auto node = vizier::VizierNode(host, 1884, descriptor);
-    bool started = node.start();
+    bool connected = true;
+    std::unique_ptr<vizier::VizierNode> node;
+    node = std::make_unique<vizier::VizierNode>(host, 1884, descriptor);
 
-    EXPECT_TRUE(started);
+    EXPECT_TRUE(connected);
 
-    auto result = node.make_get_request("node/node_descriptor", 5, std::chrono::milliseconds(1000));
+    if(!connected) {
+        return;
+    }
+
+    auto result = node->make_get_request("node/node_descriptor", 5, std::chrono::milliseconds(1000));
 }

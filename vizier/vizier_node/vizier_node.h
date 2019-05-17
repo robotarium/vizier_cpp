@@ -54,33 +54,23 @@ public:
     port_(port),
     descriptor_(descriptor),
     mqtt_client_(host, port)
-    {}
-
-    /*
-        TODO: Doc
-    */
-    bool start() {
-        bool started = this->mqtt_client_.start();
-
-        if(!started) {
-            spdlog::error("Could not start MQTT client");
-            return false;
-        }
-
+    {
         if(this->descriptor_.count("endpoint") == 0) {
-            spdlog::error("Descriptor must contain key 'endpoint'");
-            return false;
+            string er = "Descriptor must contain key 'endpoint'";
+            spdlog::error(er);
+            
+            throw std::runtime_error(er);
         }
-
-        return true;
 
         this->endpoint_ = this->descriptor_["endpoint"];
 
         auto result = parse_descriptor(descriptor_);
 
         if(!result) {
-            spdlog::error("Invalid node descriptor");
-            return false;
+            string er = "Invalid node descriptor";
+            spdlog::error(er);
+
+            throw std::runtime_error(er);
         }
 
         this->expanded_links_ = result.value();
@@ -107,8 +97,10 @@ public:
         auto get_req_result = get_requests_from_descriptor(descriptor_);
 
         if(!get_req_result) {
-            spdlog::error("Descriptor requests invalid");
-            return false;
+            string er = "Descriptor requests invalid";
+            spdlog::error(er);
+
+            throw std::runtime_error(er);
         }
 
         this->requests_ = get_req_result.value(); 
@@ -121,8 +113,6 @@ public:
                 this->subscribable_links_.insert(r.link);
             }
         }
-
-        return true;
     }
 
     optional<json> make_get_request(const string& link, size_t retries, std::chrono::milliseconds timeout) {
