@@ -115,7 +115,7 @@ public:
         }
     }
 
-    optional<json> make_get_request(const string& link, size_t retries, std::chrono::milliseconds timeout) {
+    optional<string> make_get_request(const string& link, size_t retries, std::chrono::milliseconds timeout) {
         string id = create_message_id();
         json get_request = create_request(id, Methods::GET, link, {});
 
@@ -126,11 +126,11 @@ public:
             return std::nullopt;
         }
 
-        string remote_node = link.substr(found);
+        string remote_node = link.substr(0, found);
         string response_link = create_response_link(remote_node, id);
         string request_link = create_request_link(remote_node);
 
-        spdlog::error("Sending GET request...");
+        std::cout << response_link << std::endl;
 
         optional<shared_ptr<ThreadSafeQueue<string>>> maybe_q = this->mqtt_client_.subscribe(response_link);
 
@@ -141,15 +141,14 @@ public:
         auto q = maybe_q.value();
         optional<string> message;
 
-        spdlog::error("Sending GET request...");
-
         for(size_t i = 0; i < retries; ++i) {
             this->mqtt_client_.async_publish(request_link, get_request.dump());
-            spdlog::error("Sending GET request...");
+            std::cout << get_request << std::endl;
+            spdlog::info("Sending GET request...");
             message = q->dequeue(timeout);
 
             if(!message) {
-                spdlog::error("Request timed out.  Retrying");
+                spdlog::info("Request timed out.  Retrying");
                 continue;
             } else {
                 break;
@@ -160,11 +159,16 @@ public:
             return std::nullopt;
         }
 
-        // TODO: Finish this method 
-        json json_message = message.value();
+        std::cout << message.value() << std::endl;
+        json json_message = json::parse(message.value());
         std::cout << json_message << std::endl;
 
-        return json_message;
+        if(json_message.count("body") == 0) {
+            spdlog::error("GET response received with no body");
+            return std::nullopt;
+        }
+
+        return json_message["body"];
     }
 
     /*

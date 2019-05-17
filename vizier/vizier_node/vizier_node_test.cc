@@ -5,11 +5,20 @@
 
 using json = nlohmann::json;
 
-TEST(VizierNode, Dummy) {
+TEST(VizierNode, Construct) {
+    json descriptor = {
+        {"endpoint", "node"},
+        {
+            "links", 
+            {
+                {"/0", {{"type", "STREAM"}}}
+            } 
+        },
+        {"requests", {}}
+    };
     std::string host = "192.168.1.8";
-    json descriptor = {};
-    vizier::VizierNode(host, 1884, descriptor);
-    EXPECT_EQ(0, 0);
+
+    std::unique_ptr<vizier::VizierNode> node = std::make_unique<vizier::VizierNode>(host, 1884, descriptor);
 }
 
 TEST(VizierNode, Get) {
@@ -26,8 +35,7 @@ TEST(VizierNode, Get) {
     std::string host = "192.168.1.8";
 
     bool connected = true;
-    std::unique_ptr<vizier::VizierNode> node;
-    node = std::make_unique<vizier::VizierNode>(host, 1884, descriptor);
+    std::unique_ptr<vizier::VizierNode> node = std::make_unique<vizier::VizierNode>(host, 1884, descriptor);
 
     EXPECT_TRUE(connected);
 
@@ -35,5 +43,7 @@ TEST(VizierNode, Get) {
         return;
     }
 
-    auto result = node->make_get_request("node/node_descriptor", 5, std::chrono::milliseconds(1000));
+    auto result = node->make_get_request("overhead_tracker/node_descriptor", 40, std::chrono::milliseconds(500));
+
+    std::cout << result.value() << std::endl;
 }

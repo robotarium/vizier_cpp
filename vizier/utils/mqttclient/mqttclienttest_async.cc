@@ -42,8 +42,8 @@ int main() {
   // }
 
   std::string message;
-  message.reserve(1500);
-  for(int i = 0; i < 1500; ++i) {
+  message.reserve(100);
+  for(int i = 0; i < 100; ++i) {
     message += "a";
   }
 
@@ -54,7 +54,7 @@ int main() {
     //std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() << std::endl;
     //start = now;
 
-    std::this_thread::sleep_for(std::chrono::microseconds(200));
+    std::this_thread::sleep_for(std::chrono::microseconds(5000));
   }
 
   //std::this_thread::sleep_for(std::chrono::seconds(500));
