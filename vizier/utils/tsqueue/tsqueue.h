@@ -7,39 +7,53 @@
 #include <chrono>
 #include <optional>
 
+
 template<class T> using optional = std::optional<T>;
 template<class T> using unique_lock = std::unique_lock<T>;
 using mutex = std::mutex;
+
 
 template <class T> 
 class ThreadSafeQueue {
 
 private:
   std::queue<T> q;
-	mutex m;
+  mutable mutex m;
 	std::condition_variable c;
 
 public:
   ThreadSafeQueue() = default;
   ~ThreadSafeQueue() = default;
 
-  size_t size() {
+  /*
+    TODO: Doc
+  */
+  size_t size() const {
     std::lock_guard<mutex> lock(m);
     return q.size();
   }
 
+  /*
+    TODO: Doc
+  */
   void enqueue(const T& t) {
     std::lock_guard<mutex> lock(m);
     q.push(t);
     c.notify_one();
   }
 
+  /*
+    TODO: Doc
+  */
   void enqueue(T&& t) {
     std::lock_guard<mutex> lock(m);
     q.push(std::move(t));
     c.notify_one();
   }
 
+  /*
+    TODO: Doc
+  */
   T dequeue() {
 
     //Get a lock on the mutex
@@ -57,6 +71,9 @@ public:
     return val;
   }
 
+  /*
+    TODO: Doc
+  */
   optional<T> dequeue(std::chrono::milliseconds timeout) {
     std::unique_lock<mutex> lock(m);
 

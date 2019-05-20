@@ -115,6 +115,9 @@ public:
         }
     }
 
+    /*
+        TODO: Doc
+    */
     optional<string> make_get_request(const string& link, size_t retries, std::chrono::milliseconds timeout) {
         string id = create_message_id();
         json get_request = create_request(id, Methods::GET, link, {});
@@ -160,7 +163,14 @@ public:
         }
 
         std::cout << message.value() << std::endl;
-        json json_message = json::parse(message.value());
+        json json_message;
+        try {
+            json_message = std::move(json::parse(message.value()));
+        } catch (const json::parse_error& e) {
+            spdlog::error("Failure parsing json message");
+            return std::nullopt;
+        }
+
         std::cout << json_message << std::endl;
 
         if(json_message.count("body") == 0) {

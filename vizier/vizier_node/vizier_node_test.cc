@@ -45,5 +45,5 @@ TEST(VizierNode, Get) {
 
     auto result = node->make_get_request("overhead_tracker/node_descriptor", 40, std::chrono::milliseconds(500));
 
-    std::cout << result.value() << std::endl;
+    std::cout << json::parse(result.value()) << std::endl;
 }
