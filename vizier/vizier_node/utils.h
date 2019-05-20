@@ -15,19 +15,25 @@ namespace vizier {
 using json = nlohmann::json;
 using string = std::string;
 
-//  Link types for node descriptor
+/* 
+    Link types for a node descriptor
+*/
 enum class LinkType {
     DATA,
     STREAM,
 };
 
-//  Request types for links
+/*
+    Request types for links
+*/
 enum class Methods {
     GET,
     PUT,
 };
 
-//  Holds request data for links.
+/*
+    PoD for link request data
+*/
 struct RequestData {
     string link = "";
     bool required = false;
@@ -67,6 +73,9 @@ namespace {
         return ch_set[dist(rng)];
     }
 
+    /*
+        TODO: Doc
+    */
     string random_string(size_t length, std::function<char(void)> rand_char) {
         string str(length, 0);
         std::generate_n(str.begin(), length, rand_char);
@@ -74,6 +83,9 @@ namespace {
     }
 } // namespace
 
+/*
+    TODO: Doc
+*/
 string link_type_to_str(const LinkType& type) {
     switch(type) {
         case LinkType::DATA:
@@ -89,6 +101,9 @@ string link_type_to_str(const LinkType& type) {
     };
 }
 
+/*
+    TODO: Doc
+*/
 string methods_to_str(const Methods& method) {
     switch(method) {
         case Methods::GET:
@@ -104,49 +119,59 @@ string methods_to_str(const Methods& method) {
     }
 }
 
-//  Creates a unique message ID for a request
-//  
-//  Returns:
-//      A secure, random 64-byte message ID
+/*
+    Creates a unique message ID for a request
+  
+    Returns:
+        A random 64-byte message ID
+*/
 string create_message_id() {
     return random_string(64, rand_char);
 }
 
-//  Creates a GET response JSON message
-//  
-//  Returns:
-//      A JSON object containing the keys: status, body, type
+/*
+    Creates a GET response JSON message
+  
+    Returns:
+        A JSON object containing the keys: status, body, type
+*/
 json create_response(const string& status, json body, const LinkType& topic_type) {
     // TODO: Convert to const& ?
     return {{"status", status}, {"body", std::move(body)}, {"type", link_type_to_str(topic_type)}};
 }
 
-//  Creates a response link for a node
-// 
-//  Returns:
-//      The response link for the node
+/*  
+    Creates a response link for a node
+ 
+    Returns:
+        The response link for the node
+*/
 string create_response_link(string node, string message_id) {
    return std::move(node) + "/responses/" + std::move(message_id);
 }
 
-//  Creates a request link for a node
-//
-//  Returns:
-//      The request link for a node
+/*
+    Creates a request link for a node
+
+    Returns:
+        The request link for a node
+*/
 string create_request_link(string node) {
     return std::move(node) + "/requests";
 }
 
-//  Creates a JSON-encoded GET request
-//  
-//  Args:
-//      id: id for the request.  Should be large and random
-//      method: must be in Methods enum
-//      link: link on which to make the request
-//      body: body for the request.  
-//
-//  Returns:
-//      A JSON object representing the request with the keys: id, method, link, body
+/* 
+    Creates a JSON-encoded GET request
+  
+    Args:
+        id: id for the request.  Should be large and random
+        method: must be in Methods enum
+        link: link on which to make the request
+        body: body for the request.  
+
+    Returns:
+        A JSON object representing the request with the keys: id, method, link, body
+*/
 json create_request(string id, Methods method, string link, json body) {
     // TODO: REMOVE BODY IF METHOD IS PUT
     return {
@@ -156,14 +181,16 @@ json create_request(string id, Methods method, string link, json body) {
         {"body", std::move(body)}};
 }
 
-//  Returns true if path is a subpath of link.
-//
-//  Args:
-//      link: the superset
-//      path: the subset
-//
-//  Returns:
-//      True if path is a subset of link and false otherwise
+/*
+    Returns true if path is a subpath of link.
+
+    Args:
+        link: the superset
+        path: the subset
+
+    Returns:
+        True if path is a subset of link and false otherwise
+*/
 bool is_subpath_of(const string& link, const string& path) {
 
     // Path has to be a subset of link, so it can't be longer
@@ -179,6 +206,9 @@ bool is_subpath_of(const string& link, const string& path) {
     return link.substr(0, path.length()) == path;
 }
 
+/*
+    TODO: Doc
+*/
 string to_absolute_path(string base, string path) {
 
     if(path.length() == 0) {
@@ -192,7 +222,9 @@ string to_absolute_path(string base, string path) {
     }
 }
 
-//  TODO: COMMENT
+/*
+    TODO: Doc
+*/
 optional<unordered_map<string, LinkType>> parse_descriptor(const string& path, const string& link, const json& descriptor) {
 
     auto link_here = to_absolute_path(path, link);
@@ -233,7 +265,9 @@ optional<unordered_map<string, LinkType>> parse_descriptor(const string& path, c
     }
 }
 
-//  TODO: Document
+/*
+    TODO: Doc
+*/
 optional<unordered_map<string, LinkType>> parse_descriptor(const json& descriptor) {
 
     if(descriptor.count("endpoint") == 0) {
@@ -248,7 +282,9 @@ bool operator== (const RequestData& a, const RequestData& b) {
     return (a.link == b.link) && (a.required == b.required) && (a.type == b.type);
 }
 
-//  TODO: Document
+/*
+    TODO: Doc
+*/
 optional<vector<RequestData>> get_requests_from_descriptor(const json& descriptor) {
 
     if(descriptor.count("requests") == 0) {
