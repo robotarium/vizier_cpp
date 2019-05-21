@@ -32,6 +32,15 @@ TEST(VizierNode, Get) {
         },
         {"requests", {}}
     };
+
+    descriptor["requests"] = {
+        {
+            {"link", "overhead_tracker/node_descriptor"},
+            {"type", "DATA"},
+            {"required", false}
+        }
+    };
+
     std::string host = "192.168.1.8";
 
     bool connected = true;
@@ -43,7 +52,11 @@ TEST(VizierNode, Get) {
         return;
     }
 
-    auto result = node->make_get_request("overhead_tracker/node_descriptor", 40, std::chrono::milliseconds(500));
+    auto result = node->get("overhead_tracker/node_descriptor", 40, std::chrono::milliseconds(500));
 
-    std::cout << json::parse(result.value()) << std::endl;
+    EXPECT_TRUE(bool(result));
+
+    if(result) {
+        std::cout << json::parse(result.value()) << std::endl;
+    }
 }

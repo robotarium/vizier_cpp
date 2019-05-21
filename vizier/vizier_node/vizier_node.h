@@ -25,6 +25,9 @@ template<class T> using unordered_set = std::unordered_set<T>;
 template<class T> using shared_ptr = std::shared_ptr<T>;
 
 
+/*
+    TODO: Doc
+*/
 class VizierNode {
 private:
 
@@ -93,8 +96,7 @@ public:
             this->puttable_links_.erase(reserved);
         }
 
-        this->link_data_["node_descriptor"] = this->descriptor_;
-
+        this->link_data_["node_descriptor"] = this->descriptor_.dump();
 
         // Set up remote links
         auto get_req_result = get_requests_from_descriptor(descriptor_);
@@ -121,7 +123,10 @@ public:
             }
         }
     }
-
+    
+    /* 
+        TODO: Doc
+    */
     optional<string> make_request(json body, const Methods method, const string& link, const size_t& retries, const std::chrono::milliseconds& timeout) {
         string id = create_message_id();
 
@@ -186,20 +191,15 @@ public:
     /*
         TODO: Doc
     */
-    optional<string> make_get_request(const string& link, size_t retries, std::chrono::milliseconds timeout) {
-        return make_request({}, Methods::GET, link, retries, timeout);
-    }
-
-    /*
-        TODO: Doc
-    */
-    void publish(const string& link, string message) {
+    bool publish(const string& link, string message) {
         if(this->publishable_links_.find(link) == this->publishable_links_.end()) {
             spdlog::error("Cannot publish on link {0} because it has not been declared as a link of type STREAM", link);
-            return;
+            return false;
         }
 
         this->mqtt_client_.async_publish(link, std::move(message));
+
+        return true;
     }
 
     /*

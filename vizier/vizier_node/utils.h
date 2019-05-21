@@ -10,6 +10,7 @@
 #include <optional>
 #include <spdlog/spdlog.h>
 
+
 namespace vizier {
 
 using json = nlohmann::json;
