@@ -63,7 +63,7 @@ public:
         }
 
         this->endpoint_ = this->descriptor_["endpoint"];
-
+        
         auto result = parse_descriptor(descriptor_);
 
         if(!result) {
@@ -93,6 +93,9 @@ public:
             this->puttable_links_.erase(reserved);
         }
 
+        this->link_data_["node_descriptor"] = this->descriptor_;
+
+
         // Set up remote links
         auto get_req_result = get_requests_from_descriptor(descriptor_);
 
@@ -102,6 +105,10 @@ public:
 
             throw std::runtime_error(er);
         }
+
+        /*
+            TODO: Check required links
+        */
 
         this->requests_ = get_req_result.value(); 
         for(const auto& r : this->requests_) {
@@ -115,12 +122,10 @@ public:
         }
     }
 
-    /*
-        TODO: Doc
-    */
-    optional<string> make_get_request(const string& link, size_t retries, std::chrono::milliseconds timeout) {
+    optional<string> make_request(json body, const Methods method, const string& link, const size_t& retries, const std::chrono::milliseconds& timeout) {
         string id = create_message_id();
-        json get_request = create_request(id, Methods::GET, link, {});
+
+        json request = create_request(id, method, link, std::move(body));
 
         size_t found = link.find_first_of('/');
 
@@ -133,10 +138,7 @@ public:
         string response_link = create_response_link(remote_node, id);
         string request_link = create_request_link(remote_node);
 
-        std::cout << response_link << std::endl;
-
         optional<shared_ptr<ThreadSafeQueue<string>>> maybe_q = this->mqtt_client_.subscribe(response_link);
-
         if(!maybe_q) {
             return std::nullopt;
         }
@@ -145,8 +147,8 @@ public:
         optional<string> message;
 
         for(size_t i = 0; i < retries; ++i) {
-            this->mqtt_client_.async_publish(request_link, get_request.dump());
-            std::cout << get_request << std::endl;
+            this->mqtt_client_.async_publish(request_link, request.dump());
+            std::cout << request << std::endl;
             spdlog::info("Sending GET request...");
             message = q->dequeue(timeout);
 
@@ -184,6 +186,13 @@ public:
     /*
         TODO: Doc
     */
+    optional<string> make_get_request(const string& link, size_t retries, std::chrono::milliseconds timeout) {
+        return make_request({}, Methods::GET, link, retries, timeout);
+    }
+
+    /*
+        TODO: Doc
+    */
     void publish(const string& link, string message) {
         if(this->publishable_links_.find(link) == this->publishable_links_.end()) {
             spdlog::error("Cannot publish on link {0} because it has not been declared as a link of type STREAM", link);
@@ -196,37 +205,39 @@ public:
     /*
         TODO: Doc
     */
-    string get(const string& link) {
+    optional<string> get(const string& link, const size_t& retries, const std::chrono::milliseconds& timeout) {
         if(this->gettable_links_.find(link) == this->gettable_links_.end()) {
             spdlog::error("Cannot get on link {0} because it has not been declared as a request of type DATA", link);
-            return "";
+            return std::nullopt;
         }
 
-        return "";
+        return this->make_request({}, Methods::GET, link, retries, timeout);
     }
 
     /*
         TODO: Doc
     */
-    optional<ThreadSafeQueue<string>> subscribe(const string& link) {
+    optional<shared_ptr<ThreadSafeQueue<string>>> subscribe(const string& link) {
         if(this->subscribable_links_.find(link) == this->subscribable_links_.end()) {
             spdlog::error("Cannot get on link {0} because it has not been declared as a request of type STREAM", link);
             return std::nullopt;
         }
 
-        return {};
+        return this->mqtt_client_.subscribe(link);
     }
 
     /*
         TODO: Doc
     */
-    void put(const string& link, string data) {
+    bool put(const string& link, string data) {
         if(this->puttable_links_.find(link) == this->subscribable_links_.end()) {
            spdlog::error("Cannot put on link {0} because it has not been declared as a link of type DATA", link);
-           return; 
+           return false; 
         }
 
-        // TODO: IMPLEMENT
+        this->link_data_[link] = std::move(data);
+
+        return true;
     }
 };
 
