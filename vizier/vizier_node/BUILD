@@ -16,6 +16,7 @@ cc_library(
         "@json//:json",
         "@spdlog//:spdlog",
     ],
+    visibility = ["//visibility:public"],
 )
 
 cc_binary(
