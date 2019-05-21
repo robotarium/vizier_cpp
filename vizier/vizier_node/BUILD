@@ -40,3 +40,15 @@ cc_binary(
         "@gtest//:main",
     ],
 )
+
+# https://docs.bazel.build/versions/master/be/c-cpp.html#cc_binary
+cc_binary(
+    name = "vizier_node_mock",
+    srcs = ["vizier_node_mock.cc"],
+    copts = [],
+    deps = [
+        ":vizier_node",
+        "@json//:json",
+        "@gtest//:main",
+    ],
+)

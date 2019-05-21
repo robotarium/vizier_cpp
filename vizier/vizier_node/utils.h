@@ -121,6 +121,21 @@ string methods_to_str(const Methods& method) {
 }
 
 /*
+    TODO: Doc
+*/
+optional<Methods> string_to_methods(const string& s) {
+    if(s == "GET") {
+        return Methods::GET;
+    }
+
+    if(s == "PUT") {
+        return Methods::PUT;
+    }
+
+    return std::nullopt;
+}
+
+/*
     Creates a unique message ID for a request
   
     Returns:
@@ -136,7 +151,7 @@ string create_message_id() {
     Returns:
         A JSON object containing the keys: status, body, type
 */
-json create_response(const string& status, json body, const LinkType& topic_type) {
+json create_response(const string& status, string body, const LinkType& topic_type) {
     // TODO: Convert to const& ?
     return {{"status", status}, {"body", std::move(body)}, {"type", link_type_to_str(topic_type)}};
 }
