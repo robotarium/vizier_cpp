@@ -30,7 +30,6 @@ template<class T> using shared_ptr = std::shared_ptr<T>;
 */
 class VizierNode {
 private:
-
     const string host_;
     const int port_;
     const json descriptor_;
@@ -75,8 +74,6 @@ private:
 
         for(size_t i = 0; i < retries; ++i) {
             this->mqtt_client_.async_publish(request_link, request.dump());
-            std::cout << request << std::endl;
-            spdlog::info("Sending GET request...");
             message = q->dequeue(timeout);
 
             if(!message) {
@@ -91,7 +88,6 @@ private:
             return std::nullopt;
         }
 
-        std::cout << message.value() << std::endl;
         json json_message;
         try {
             json_message = std::move(json::parse(message.value()));
@@ -99,8 +95,6 @@ private:
             spdlog::error("Failure parsing json message");
             return std::nullopt;
         }
-
-        std::cout << json_message << std::endl;
 
         if(json_message.count("body") == 0) {
             spdlog::error("GET response received with no body");
@@ -198,7 +192,6 @@ public:
         this->endpoint_ = this->descriptor_["endpoint"];
         
         auto result = parse_descriptor(descriptor_);
-
         if(!result) {
             string er = "Invalid node descriptor";
             spdlog::error(er);
@@ -232,9 +225,8 @@ public:
         std::function<void(string, string)> cb = [this](string topic, string link) {this->handle_requests_(topic, link);};
         this->mqtt_client_.subscribe_with_callback(create_request_link(this->endpoint_), std::move(cb));
 
-        // Set up remote links
+        // Set up requested links
         auto get_req_result = get_requests_from_descriptor(descriptor_);
-
         if(!get_req_result) {
             string er = "Descriptor requests invalid";
             spdlog::error(er);
@@ -246,6 +238,7 @@ public:
             TODO: Check required links
         */
 
+        // Determine type of requested links: DATA or STREAM
         this->requests_ = get_req_result.value(); 
         for(const auto& r : this->requests_) {
             if(r.type == LinkType::DATA) {

@@ -38,6 +38,11 @@ TEST(VizierNode, Get) {
             {"link", "overhead_tracker/node_descriptor"},
             {"type", "DATA"},
             {"required", false}
+        },
+        {
+            {"link", "dummy/node_descriptor"},
+            {"type", "DATA"},
+            {"required", false}
         }
     };
 
@@ -48,15 +53,41 @@ TEST(VizierNode, Get) {
 
     EXPECT_TRUE(connected);
 
-    if(!connected) {
+    if (!connected) {
         return;
     }
 
+    auto start = std::chrono::steady_clock::now();
     auto result = node->get("overhead_tracker/node_descriptor", 40, std::chrono::milliseconds(500));
+    std::cout << "TOOK: " << std::chrono::duration_cast<std::chrono::microseconds>((std::chrono::steady_clock::now()-start)).count() << std::endl;;
+
+    int64_t average = 0;
+    for (int i = 0; i < 1000; ++i) {
+        start = std::chrono::steady_clock::now();
+        result = node->get("dummy/node_descriptor", 40, std::chrono::milliseconds(500));
+        auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>((std::chrono::steady_clock::now()-start)).count();
+        average += elapsed;
+        //std::cout << "TOOK: " << elapsed << std::endl;;
+    }
+
+    std::cout << "AVERAGE: " << average / 1000 << std::endl;
+
+    average = 0;
+    for (int i = 0; i < 1000; ++i) {
+        start = std::chrono::steady_clock::now();
+        result = node->get("overhead_tracker/node_descriptor", 40, std::chrono::milliseconds(500));
+        auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>((std::chrono::steady_clock::now()-start)).count();
+        average += elapsed;
+        //std::cout << "TOOK: " << elapsed << std::endl;;
+    }
+
+    std::cout << "AVERAGE: " << average / 1000 << std::endl;
+
+
 
     EXPECT_TRUE(bool(result));
 
-    if(result) {
+    /*if(result) {
         std::cout << json::parse(result.value()) << std::endl;
-    }
+    }*/
 }

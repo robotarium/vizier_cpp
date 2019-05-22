@@ -21,18 +21,18 @@ TEST(CreateResponse, CreatesCorrectResponse) {
 
     json expected = {
         {"status", "1"},
-        {"body", body},
+        {"body", body.dump()},
         {"type", "DATA"}
     };
 
     json expected2 = {
         {"status", "2"},
-        {"body", body},
+        {"body", body.dump()},
         {"type", "STREAM"}
     };
 
-    EXPECT_EQ(expected, vizier::create_response("1", body, vizier::LinkType::DATA));
-    EXPECT_EQ(expected2, vizier::create_response("2", body, vizier::LinkType::STREAM));
+    EXPECT_EQ(expected, vizier::create_response("1", body.dump(), vizier::LinkType::DATA));
+    EXPECT_EQ(expected2, vizier::create_response("2", body.dump(), vizier::LinkType::STREAM));
 }
 
 TEST(CreateResponse, CreatesCorrectResponseFuzzy) {
@@ -47,11 +47,11 @@ TEST(CreateResponse, CreatesCorrectResponseFuzzy) {
 
         json expected = {
             {"status", status},
-            {"body", body},
+            {"body", body.dump()},
             {"type", type}
         };
 
-        EXPECT_EQ(expected, vizier::create_response(status, body, vizier::LinkType::DATA));
+        EXPECT_EQ(expected, vizier::create_response(status, body.dump(), vizier::LinkType::DATA));
     }
 }
 

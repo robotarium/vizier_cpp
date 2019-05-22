@@ -3,6 +3,7 @@ cc_library(
     hdrs = ["mqttclient.h", "mqttclient_async.h"],
     linkopts = ["-pthread", "-lmosquitto"],
     deps = [
+            "//vizier/vizier_node:utils",
             "//vizier/utils/tsqueue:tsqueue",
             "@spdlog//:spdlog"
     ],

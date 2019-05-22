@@ -2,9 +2,9 @@ cc_library(
     name = "utils",
     hdrs = ["utils.h"],
     deps = [
-        "//vizier/utils/mqttclient:mqttclient",
         "@spdlog//:spdlog",
     ],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
