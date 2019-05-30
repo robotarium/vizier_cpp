@@ -3,6 +3,7 @@ cc_library(
     hdrs = ["utils.h"],
     deps = [
         "@spdlog//:spdlog",
+        "@json//:json",
     ],
     visibility = ["//visibility:public"],
 )

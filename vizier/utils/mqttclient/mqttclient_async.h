@@ -15,14 +15,18 @@
 #include <memory>
 
 using string = std::string;
+
 template <class T>
 using optional = std::optional<T>;
+
 template <class T>
 using shared_ptr = std::shared_ptr<T>;
-template<class T>
+
+template <class T>
 using unique_ptr = std::unique_ptr<T>;
 
 class MqttClientAsync {
+private:
     /*
     Custom deleter for mosquttio C client pointer for wrapper in a std::unique_ptr.
     */
@@ -31,7 +35,7 @@ class MqttClientAsync {
             mosquitto_destroy(mosq);
         }
     };
-private:
+
     string host;
     int port;
 
@@ -76,7 +80,6 @@ public:
             spdlog::error("Unable to connect to MQTT broker at host {0} port {1}", host, port);
 
             // Destroy memory that we allocated so far
-            //mosquitto_destroy(mosq);
             mosquitto_lib_cleanup();
 
             throw std::runtime_error("Unable to connect to MQTT broker");
@@ -93,11 +96,18 @@ public:
         this->modification_thread = std::thread(&MqttClientAsync::modify_loop, this);
     }
 
+    /*
+    Default
+    */
     MqttClientAsync(MqttClientAsync&& that) = default;
+
+    /*
+    Default
+    */
     MqttClientAsync& operator= (MqttClientAsync&& that) = default;
 
     /*
-        TODO: Doc
+    TODO: Doc
     */
     ~MqttClientAsync() {
         //  Enqueue poison pill for modifications thread
@@ -113,11 +123,6 @@ public:
         if (this->modification_thread.joinable()) {
             this->modification_thread.join();
         }
-
-        //  Clean up mosquitto library
-        /*if (mosq != NULL) {
-            mosquitto_destroy(mosq);
-        }*/
 
         mosquitto_lib_cleanup();
     }
