@@ -15,6 +15,11 @@
 
 namespace vizier {
 
+enum class ReponseCodes {
+    ERROR = 404,
+    OK = 200
+};
+
 using json = nlohmann::json;
 using string = std::string;
 
@@ -27,8 +32,10 @@ template<class T> using shared_ptr = std::shared_ptr<T>;
 
 /*
     TODO: Doc
+    TODO: Make node templated to accept different pub/sub clients
 */
 class VizierNode {
+
 private:
     const string host_;
     const int port_;
@@ -56,7 +63,7 @@ private:
         size_t found = link.find_first_of('/');
 
         if(found == string::npos) {
-            spdlog::error("Invalid link {0}.  Requires a '/'");
+            spdlog::error("Invalid link {0}. Structure should be node_name/link/link...");
             return std::nullopt;
         }
 
@@ -104,7 +111,11 @@ private:
         return json_message["body"];
     }
 
+    /* 
+        TODO: DOC
+    */
     void handle_requests_(string topic, string message) {
+        // Try to decode message
         json decoded;
         try {
            decoded = std::move(json::parse(message)); 
@@ -158,20 +169,26 @@ private:
             break;
         }
 
+        // TODO: Implement PUT
+        if(!maybe_response) {
+            return;
+        }
+
         string dumped;
+        // TODO: Catch a more specific exception
         try {
             dumped = std::move(maybe_response.value().dump());
         } catch(const std::exception& e) {
             spdlog::error("Could not dump JSON response");
         }
 
-        if(maybe_response) {
+        // If something valid got moved into dumped
+        if(dumped.length() > 0) {
             this->mqtt_client_.async_publish(response_link, std::move(dumped));
         }
     }
 
 public:
-
     /*
         TODO: Doc
     */

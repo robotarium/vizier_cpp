@@ -15,13 +15,15 @@ int main() {
         {
             "links", 
             {
-                {"/0", {{"type", "STREAM"}}}
+                {"/0", {{"type", "STREAM"}}},
+                {"/1", {{"type", "DATA"}}}
             } 
         },
         {"requests", {}}
     };
 
     vizier::VizierNode node(host, port, descriptor);
+    node.put("dummy/1", "data");
     
     while(true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));

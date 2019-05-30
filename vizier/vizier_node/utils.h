@@ -41,6 +41,10 @@ struct RequestData {
     LinkType type = LinkType::STREAM;
 };
 
+bool operator== (const RequestData& a, const RequestData& b) {
+    return (a.link == b.link) && (a.required == b.required) && (a.type == b.type);
+}
+
 template <class T, class U> using unordered_map = std::unordered_map<T, U>;
 template<class T> using vector = std::vector<T>;
 template<class T> using optional = std::optional<T>;
@@ -151,8 +155,12 @@ string create_message_id() {
     Returns:
         A JSON object containing the keys: status, body, type
 */
-json create_response(const string& status, string body, const LinkType& topic_type) {
-    return {{"status", status}, {"body", std::move(body)}, {"type", link_type_to_str(topic_type)}};
+json create_response(const string& status, string&& body, const LinkType& topic_type) {
+    return {{"status", status}, {"body", body}, {"type", link_type_to_str(topic_type)}};
+}
+
+json create_response(const string& status, const string& body, const LinkType& topic_type) {
+    return create_response(status, string(body), topic_type);
 }
 
 /*  
@@ -161,8 +169,8 @@ json create_response(const string& status, string body, const LinkType& topic_ty
     Returns:
         The response link for the node
 */
-string create_response_link(string node, string message_id) {
-   return std::move(node) + "/responses/" + std::move(message_id);
+string create_response_link(const string& node, const string& message_id) {
+   return node + "/responses/" + message_id;
 }
 
 /*
@@ -284,24 +292,24 @@ optional<unordered_map<string, LinkType>> parse_descriptor(const string& path, c
     TODO: Doc
 */
 optional<unordered_map<string, LinkType>> parse_descriptor(const json& descriptor) {
-
     if(descriptor.count("endpoint") == 0) {
         spdlog::error("Node descriptor must contain key 'endpoint'");
         return std::nullopt;
     }
 
-    return parse_descriptor("", descriptor["endpoint"], descriptor);
-}
+    // The case where links is empty here is different from in recursive parsing
+    // so we handle it separately.
+    if(descriptor.count("links") == 0) {
+        return {};
+    }
 
-bool operator== (const RequestData& a, const RequestData& b) {
-    return (a.link == b.link) && (a.required == b.required) && (a.type == b.type);
+    return parse_descriptor("", descriptor["endpoint"], descriptor);
 }
 
 /*
     TODO: Doc
 */
 optional<vector<RequestData>> get_requests_from_descriptor(const json& descriptor) {
-
     if(descriptor.count("requests") == 0) {
         return vector<RequestData>();
     }
