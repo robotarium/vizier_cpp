@@ -1,6 +1,6 @@
 cc_library(
     name = "mqttclient",
-    hdrs = ["mqttclient.h", "mqttclient_async.h"],
+    hdrs = ["mqttclient_async.h"],
     linkopts = ["-pthread", "-lmosquitto"],
     deps = [
             "//vizier/vizier_node:utils",
@@ -8,15 +8,6 @@ cc_library(
             "@spdlog//:spdlog"
     ],
     visibility = ["//visibility:public"],
-)
-
-cc_binary(
-    name = "mqttclienttest",
-    srcs = ["mqttclienttest.cc"],
-    deps = [
-        ":mqttclient",
-        "@spdlog//:spdlog",
-    ],
 )
 
 cc_binary(
