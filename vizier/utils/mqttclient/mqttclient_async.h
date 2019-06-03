@@ -25,6 +25,9 @@ using shared_ptr = std::shared_ptr<T>;
 template <class T>
 using unique_ptr = std::unique_ptr<T>;
 
+/*
+TODO: Make templated with queue type
+*/
 class MqttClientAsync {
 private:
     /*
@@ -62,6 +65,7 @@ public:
 
         mosquitto_lib_init();
 
+        // TODO: Make these optional arguments
         int keepalive = 20;
         bool clean_session = true;
 
@@ -77,11 +81,10 @@ public:
         }
 
         if (mosquitto_connect_bind(&(*mosq), host.c_str(), port, keepalive, NULL)) {
-            spdlog::error("Unable to connect to MQTT broker at host {0} port {1}", host, port);
-
             // Destroy memory that we allocated so far
             mosquitto_lib_cleanup();
 
+            spdlog::error("Unable to connect to MQTT broker at host {0} port {1}", host, port);
             throw std::runtime_error("Unable to connect to MQTT broker");
         }
 
@@ -128,7 +131,7 @@ public:
     }
 
     /*  
-    Version of subscribe that also takes a pointer to a promise to indicate when the subscription has been completed.  Thread safe
+    Subscribes to an MQTT topic and returns a pointer to a promise to indicate when the subscription has been completed.  Thread safe
   
     Args:
         topic: see subscribe_with_callback
