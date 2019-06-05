@@ -56,7 +56,7 @@ private:
         TODO: Doc
     */
     optional<string> make_request(json body, const Methods method, const string& link, const size_t& retries, const std::chrono::milliseconds& timeout) {
-        string id = create_message_id();
+        string id = create_message_id(this->endpoint_);
 
         json request = create_request(id, method, link, std::move(body));
 

@@ -10,7 +10,7 @@ const int FUZZY_LENGTH = 100;
 TEST(CreateMessageId, CreatesCorrectIdLength) {
     auto expected = size_t(64);
     for(int i = 0; i < FUZZY_LENGTH; ++i) {
-        EXPECT_EQ(expected, vizier::create_message_id().length());
+        EXPECT_EQ(expected, vizier::create_message_id("").length());
     }
 }
 

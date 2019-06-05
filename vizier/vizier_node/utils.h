@@ -145,8 +145,8 @@ optional<Methods> string_to_methods(const string& s) {
     Returns:
         A random 64-byte message ID
 */
-string create_message_id() {
-    return random_string(64, rand_char);
+string create_message_id(string node) {
+    return node + "/" + random_string(64, rand_char);
 }
 
 /*
